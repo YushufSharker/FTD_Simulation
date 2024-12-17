@@ -29,9 +29,11 @@ corr = matrix(c(1,    0.65, 0.40, 0.25, 0.15,
                 0.40, 0.65, 1,    0.65, 0.40,
                 0.25, 0.40, 0.65, 1,    0.65,
                 0.15, 0.25, 0.40, 0.65, 1   ),  nrow = 5, byrow = TRUE)
-sd = c(2, 3, 4, 5, 6)
+sd = c(1, 2, 2, 2, 2)
 beta = c (3.4,11.3,3.7) # ncs time basis coefficients
 
+delta1 = 0.3 # 30% reduction for times >0
+delta2 = 0.3 # 30% slower progression
 
 placeb_model <- function(M, n_pbo = 40, n_act = 80, ncs_df = 2, beta){
   n = n_pbo + n_act
@@ -55,38 +57,79 @@ return(dd0 = dd0)
 }
 
 cov = diag(sd) %*% corr %*% diag(sd)
-ns_fun_true <- lapply(1:2, function(x){function(t){as.numeric(predict(ns(d00$M,2), t)[,x])}})
-
-#mutate(months_jitter = case_when(visNo == 1 ~ 0, TRUE ~ rnorm(n=n*m, sd=jitter_sd)))%>%
-#dd0 = placebo model data without error
-
-ggplot(data = dd0, aes(x = month, y = fixef0, colour = as.factor(group), group = id)) + geom_line()
+error <-as.vector(matrix(t(mvtnorm::rmvnorm(n, mean = rep(0, m), sigma = cov))))
 
 
-# Functions to generate treatment progression based on placebo progression.
+dat <- placeb_model(M = c(0,6,12,18,24), beta = c (3.4,11.3,3.7))
 
-delta1=0.54
-delta2=0.4
-delta3=0.4
-monthdelay=5
+# 30% reduction for times >0
+dat1 <- dat %>% mutate(y = fixef0 + (Mcat6 + Mcat12 + Mcat18 + Mcat24) *
+                         (-delta1) * fixef0 * group + error) %>%
+  group_by(id) %>%
+  mutate(chg = y - y[1L]) %>% ungroup() %>%
+  mutate(group = as.factor(group), id = as.factor(id))
 
-fixef24 = beta[1] + ns_fun_true[[1]](24)*beta[2] + ns_fun_true[[2]](24)*beta[3]
-y1true = - delta1 * (ns_fun_true[[1]](24)*beta[2] + ns_fun_true[[2]](24)*beta[3])
-y2true = - delta2 * (ns_fun_true[[1]](24-monthdelay)*beta[2] + ns_fun_true[[2]](24-monthdelay)*beta[3])
-y3true = - delta3 * (ns_fun_true[[1]](24)*beta[2] + ns_fun_true[[2]](24)*beta[3])
-resids_w <- mvtnorm::rmvnorm(n,sigma=cov)
-colnames(resids_w) <- 1:ncol(resids_w)
-resids <- resids_w %>% as_tibble() %>% mutate(id = 1:n, active = sample(0:1, size = n, replace=TRUE, prob=c(1/3,2/3))) %>%
-  pivot_longer('1':'5', names_to = 'visNo', values_to = 'residual') %>%
-  mutate(visNo = as.numeric(visNo),  Active = as.factor(active))
+ggplot(data = dat1, aes(x = month, y = y, colour = as.factor(group), group = id)) + geom_line()+
+  geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) + theme_minimal()
 
-#Sim Data matrix
-dd1 <- dd0 %>% left_join(resids, by=c('id', 'visNo')) %>% mutate(Active1 = if_else(M==0, "0", Active))%>% # mutate(Act_vis = with(dd0, interaction(Active1, M))) %>%
-  mutate(# type I error
-    y0 = fixef0,# + residual,
-    # stable
-    # 20 pct reduction
-    y1 = y0 - active * delta1 * (ns_fun[[1]](month)*beta[2] + ns_fun[[2]](month)*beta[3]),
-    # 5 month delay
-    y2 = case_when(month < monthdelay ~ y0, month >= monthdelay ~ y0 - active * delta2*(ns_fun[[1]](month-monthdelay)*beta[2] + ns_fun[[2]](month-monthdelay)*beta[3])),
-    y3 = y0 - active * delta3 * (ns_fun[[1]](month)*beta[2] + ns_fun[[2]](month)*beta[3]))
+
+# 30% slower progression
+dat2 <- dat %>% group_by(id) %>%
+  mutate(y = spline(
+    x = M * (1 + delta2 * group),
+    y = c(3.4, 6.63, 9.02, 10.0, 10.1),
+    method = "natural",
+    xout = c(0, 6, 12, 18, 24)
+  )$y) %>%
+  ungroup() %>%
+  mutate(y = y + error) %>%
+  group_by(id) %>%
+  mutate(chg = y - y[1L]) %>%
+  ungroup() %>%  mutate(group = as.factor(group), id = as.factor(id))
+
+ggplot(data = dat2, aes(x = month, y = y, colour = as.factor(group), group = id)) + geom_line()+
+geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) + theme_minimal()
+
+# Linear drug effect and observe x% reduction from placebo at time 24.
+# (reduction proportional to time ???)
+dat3 <- dat %>% group_by(id) %>%
+  mutate(y = fixef0*(1-spline(x = c(min(M), max(M)), y=c(.001, .3), method = "natural", xout = c(0, 6, 12, 18, 24))$y*group)) %>%
+  ungroup() %>%
+  mutate(y = y + error) %>%
+  group_by(id) %>%
+  mutate(chg = y - y[1L]) %>%
+  ungroup() %>%
+  mutate(group = as.factor(group), id = as.factor(id))
+
+# ggplot(data = dat3, aes(x = month, y = y, colour = as.factor(group), group = id)) + geom_line()+
+# geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) + theme_minimal()
+
+library(mmrm)
+library(broom)
+fit <- mmrm(
+  formula = chg ~ group*Mcat+ ar1(Mcat | id),
+  data = dat1,
+  control = mmrm_control(method = "Kenward-Roger")
+)
+
+# tests
+cov2cor((fit)$cov)
+summary(fit)
+lsm <-emmeans(fit, ~ group | Mcat, type = "response")
+tibble(as.data.frame(emmeans(fit, ~ group | Mcat, type = "response")[9:10])) %>% mutate(simno = 1)
+data.frame(confint(pairs(lsm, reverse = TRUE)))
+
+# do experiment#copied
+fit_data<- model.frame(fit)
+LSmeans_object <- emmeans::emmeans(   fit,   data = fit_data,   specs = c("Mcat", "group"),   weights = "proportional" )
+LSmeans_object
+
+library(tern.mmrm)
+get_mmrm_lsmeans(fit,  group * Mcat , conf_level, weights, averages = list())
+tidy(fit) %>% select(term, estimate, `p.value`) %>%filter(term == "group1:Mcat24") %>% select(-term)
+library(sandwich)
+library(rigr)
+test <- c(0,0,0,0,1,0,1,0,0,0)
+lincom(fit, test)
+
+
