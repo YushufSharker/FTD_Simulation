@@ -7,6 +7,7 @@
 
 # Packages
 library(tidyverse)
+
 library(lme4)
 library(emmeans)
 library(splines)
@@ -60,7 +61,22 @@ cov = diag(sd) %*% corr %*% diag(sd)
 error <-as.vector(matrix(t(mvtnorm::rmvnorm(n, mean = rep(0, m), sigma = cov))))
 
 
-dat <- placeb_model(M = c(0,6,12,18,24), beta = c (3.4,11.3,3.7))
+dat <- placeb_model(M = c(0,6,12,18,24), beta = c (3.4,12,5))%>%
+  group_by(id) %>%
+  mutate(chg = fixef0 - fixef0[1L]) %>%
+  ungroup()
+ ggplot(data = dat, aes(x = month, y = fixef0, colour = as.factor(group), group = id)) +
+   geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) + theme_minimal()
+
+#Null
+dat0 <- dat %>% mutate(y = fixef0 + error) %>%
+  group_by(id) %>%
+  mutate(chg = y - y[1L]) %>% ungroup() %>%
+    ungroup() %>%
+    mutate(group = as.factor(group), id = as.factor(id))
+
+  # ggplot(data = dat0, aes(x = month, y = y, colour = as.factor(group), group = id)) +geom_line()+
+  #   geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) + theme_minimal()
 
 # 30% reduction for times >0
 dat1 <- dat %>% mutate(y = fixef0 + (Mcat6 + Mcat12 + Mcat18 + Mcat24) *
@@ -69,8 +85,8 @@ dat1 <- dat %>% mutate(y = fixef0 + (Mcat6 + Mcat12 + Mcat18 + Mcat24) *
   mutate(chg = y - y[1L]) %>% ungroup() %>%
   mutate(group = as.factor(group), id = as.factor(id))
 
-ggplot(data = dat1, aes(x = month, y = y, colour = as.factor(group), group = id)) + geom_line()+
-  geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) + theme_minimal()
+# ggplot(data = dat1, aes(x = month, y = y, colour = as.factor(group), group = id)) + geom_line()+
+#   geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) + theme_minimal()
 
 
 # 30% slower progression
@@ -132,4 +148,4 @@ library(rigr)
 test <- c(0,0,0,0,1,0,1,0,0,0)
 lincom(fit, test)
 
-
+#Ref resource for MMRM https://cran.r-project.org/web/packages/mmrm/vignettes/introduction.html
