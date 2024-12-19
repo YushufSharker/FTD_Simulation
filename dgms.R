@@ -2,15 +2,17 @@
 # Date: 2024-12-16
 # These are the functions to supplement or take the lead in the simulation for FTD
 # to evaluate the power and type-1 error of CS2 compared to MMRM
-
+# https://studio-insight.rda.onetakeda.com/
 # Functions for generating placebo progression
 
 # Packages
 library(tidyverse)
-
-library(lme4)
 library(emmeans)
+library(broom)
 library(splines)
+
+
+library(plyr)
 library(mice) # Multiple imputation
 library(miceadds)
 library(pan)
@@ -24,17 +26,8 @@ n_pbo = 40
 n_act = 80
 jitter_sd = 0.8 ### patients visit windows
 ncs_df = 2
-
-corr = matrix(c(1,    0.65, 0.40, 0.25, 0.15,
-                0.65, 1,    0.65, 0.40, 0.25,
-                0.40, 0.65, 1,    0.65, 0.40,
-                0.25, 0.40, 0.65, 1,    0.65,
-                0.15, 0.25, 0.40, 0.65, 1   ),  nrow = 5, byrow = TRUE)
-sd = c(1, 2, 2, 2, 2)
 beta = c (3.4,11.3,3.7) # ncs time basis coefficients
 
-delta1 = 0.3 # 30% reduction for times >0
-delta2 = 0.3 # 30% slower progression
 
 placeb_model <- function(M, n_pbo = 40, n_act = 80, ncs_df = 2, beta){
   n = n_pbo + n_act
@@ -45,17 +38,27 @@ placeb_model <- function(M, n_pbo = 40, n_act = 80, ncs_df = 2, beta){
   visinfo <- expand_grid(id = 1:n,visNo = 1:m) %>%  group_by(visNo)
   d00 <- subinfo %>% left_join(visinfo, by="id") %>% left_join(visits, by="visNo") %>%
     left_join(group, by="id")
-  ns_basis <- ns(d00$M,df=ncs_df)
+ # ns_basis <- ns(d00$M,df=ncs_df)
 
-dd00 <- d00 %>% mutate(Mcat=as.factor(M), month = M )%>%
+dd00 <- d00 %>% mutate(Mcat=as.factor(M), month = M, monthj = M+rnorm(m*n, mean = 0, jitter_sd) )%>%
   mutate(baseline = ifelse(M > 0, 1, 0))
-# ns_fun <- lapply(1:2, function(x){function(t){as.numeric(predict(ns(datinput$month,2), t)[,x])}})
 dd0 <- model.matrix(~ id + visNo + Mcat+ ns(dd00$month, 2), dd00 ) %>% as_tibble() %>% select(-"(Intercept)") %>%
-  rename(ns1 = `ns(dd00$month, 2)1`, ns2 = `ns(dd00$month, 2)2`) %>%
+  dplyr::rename(ns1 = `ns(dd00$month, 2)1`, ns2 = `ns(dd00$month, 2)2`) %>%
   mutate(fixef0 = beta[1] + ns1*beta[2] + ns2*beta[3]) %>%
   left_join(dd00, by = c('id', 'visNo'))
 return(dd0 = dd0)
 }
+# Monthj not used yet will do next
+
+corr = matrix(c(1,    0.65, 0.40, 0.25, 0.15,
+                0.65, 1,    0.65, 0.40, 0.25,
+                0.40, 0.65, 1,    0.65, 0.40,
+                0.25, 0.40, 0.65, 1,    0.65,
+                0.15, 0.25, 0.40, 0.65, 1   ),  nrow = 5, byrow = TRUE)
+sd = c(1, 2, 2, 2, 2)
+
+delta1 = 0.3 # 30% reduction for times >0
+delta2 = 0.3 # 30% slower progression
 
 cov = diag(sd) %*% corr %*% diag(sd)
 error <-as.vector(matrix(t(mvtnorm::rmvnorm(n, mean = rep(0, m), sigma = cov))))
@@ -70,61 +73,87 @@ dat <- placeb_model(M = c(0,6,12,18,24), beta = c (3.4,12,5))%>%
 
 #Null
 dat0 <- dat %>% mutate(y = fixef0 + error) %>%
+  mutate(y = plyr::round_any(y, 0.5))%>%
   group_by(id) %>%
   mutate(chg = y - y[1L]) %>% ungroup() %>%
     ungroup() %>%
     mutate(group = as.factor(group), id = as.factor(id))
 
-  # ggplot(data = dat0, aes(x = month, y = y, colour = as.factor(group), group = id)) +geom_line()+
-  #   geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) + theme_minimal()
+ f0<- ggplot(data = dat0, aes(x = month, y = y, colour = as.factor(group), group = id)) +geom_line(lwd = .25)+
+    geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) + theme(legend.position = "bottom")+
+    scale_colour_discrete(name = "Group", labels = c("Placebo", "Treatment"))+
+    xlab("Month") + ylab("FTLD CDR SB score")+ggtitle("Null Scenario")
 
-# 30% reduction for times >0
-dat1 <- dat %>% mutate(y = fixef0 + (Mcat6 + Mcat12 + Mcat18 + Mcat24) *
-                         (-delta1) * fixef0 * group + error) %>%
-  group_by(id) %>%
-  mutate(chg = y - y[1L]) %>% ungroup() %>%
-  mutate(group = as.factor(group), id = as.factor(id))
+# 30% reduction for all times >0
+  dat1 <- dat %>% mutate(chg = chg*(1-delta1*group))%>%
+    group_by(id) %>% mutate(fixef0 = chg+fixef0[1L]) %>%
+    ungroup() %>%
+    mutate(y = fixef0 +error ) %>%
+    mutate(y = plyr::round_any(y, 0.5))%>%
+    group_by(id) %>%
+    mutate(chg = y - y[1L]) %>% ungroup() %>%
+    mutate(group = as.factor(group), id = as.factor(id))
 
-# ggplot(data = dat1, aes(x = month, y = y, colour = as.factor(group), group = id)) + geom_line()+
-#   geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) + theme_minimal()
+f1<-ggplot(data = dat1, aes(x = month, y = y, colour = as.factor(group), group = id)) + geom_line(lwd=.25)+
+  geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) + theme(legend.position = "bottom")+
+  scale_colour_discrete(name = "Group", labels = c("Placebo", "Treatment"))+
+  xlab("Month") + ylab("FTLD CDR SB score")+ggtitle("30% Proportional reduction")
+
 
 
 # 30% slower progression
-dat2 <- dat %>% group_by(id) %>%
+dat2 <- dat %>% dplyr::group_by(id) %>%
   mutate(y = spline(
     x = M * (1 + delta2 * group),
-    y = c(3.4, 6.63, 9.02, 10.0, 10.1),
+    y = fixef0     ,# c(3.4, 6.63, 9.02, 10.0, 10.1),
     method = "natural",
     xout = c(0, 6, 12, 18, 24)
   )$y) %>%
   ungroup() %>%
   mutate(y = y + error) %>%
-  group_by(id) %>%
-  mutate(chg = y - y[1L]) %>%
-  ungroup() %>%  mutate(group = as.factor(group), id = as.factor(id))
-
-ggplot(data = dat2, aes(x = month, y = y, colour = as.factor(group), group = id)) + geom_line()+
-geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) + theme_minimal()
-
-# Linear drug effect and observe x% reduction from placebo at time 24.
-# (reduction proportional to time ???)
-dat3 <- dat %>% group_by(id) %>%
-  mutate(y = fixef0*(1-spline(x = c(min(M), max(M)), y=c(.001, .3), method = "natural", xout = c(0, 6, 12, 18, 24))$y*group)) %>%
-  ungroup() %>%
-  mutate(y = y + error) %>%
+  mutate(y = plyr::round_any(y, 0.5))%>%
   group_by(id) %>%
   mutate(chg = y - y[1L]) %>%
   ungroup() %>%
   mutate(group = as.factor(group), id = as.factor(id))
 
-# ggplot(data = dat3, aes(x = month, y = y, colour = as.factor(group), group = id)) + geom_line()+
-# geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) + theme_minimal()
+f2<-ggplot(data = dat2, aes(x = month, y = y, colour = as.factor(group), group = id)) + geom_line(lwd = .25)+
+geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2)  +
+  theme(legend.position = "bottom")+
+  scale_colour_discrete(name = "Group", labels = c("Placebo", "Treatment"))+
+  xlab("Month") + ylab("FTLD CDR SB score")+ggtitle("30% Slower Progression")
 
+
+# Linear drug effect and observe x% absolute reduction from placebo at time 24.
+# (reduction proportional to time ???)
+dat3 <- dat %>%
+  mutate(chg = chg*(1-spline(x = c(min(M), max(M)), y=c(.001, delta2),
+                             method = "natural", xout = c(0, 6, 12, 18, 24))$y*group))%>%
+  group_by(id) %>%
+  mutate(fixef0 = chg+fixef0[1L]) %>%
+  # mutate(y = fixef0*(1-spline(x = c(min(M), max(M)), y=c(.001, delta2),
+  #       method = "natural", xout = c(0, 6, 12, 18, 24))$y*group)) %>%
+  ungroup() %>%
+  mutate(y = fixef0 + error) %>%
+  mutate(y = plyr::round_any(y, 0.5))%>%
+  group_by(id) %>%
+  mutate(chg = y - y[1L]) %>%
+  ungroup() %>%
+  mutate(group = as.factor(group), id = as.factor(id))
+
+f3<-ggplot(data = dat3, aes(x = month, y = y, colour = as.factor(group), group = id)) + geom_line(lwd=.25)+
+geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) +
+  theme(legend.position = "bottom")+
+  scale_colour_discrete(name = "Group", labels = c("Placebo", "Treatment"))+
+  xlab("Month") + ylab("FTLD CDR SB score")+ggtitle("30% gradual reduction")
+
+
+# Model Fits
 library(mmrm)
 library(broom)
-fit <- mmrm(
+fit <- mmrm::mmrm(
   formula = chg ~ group*Mcat+ ar1(Mcat | id),
-  data = dat1,
+  data = dat3,
   control = mmrm_control(method = "Kenward-Roger")
 )
 
