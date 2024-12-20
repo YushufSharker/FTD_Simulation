@@ -17,3 +17,8 @@ for (v in M) {
                   size = floor(length(ids) * drop_out))
   dat <- subset(dat, !(M >= v & (id %in% id_rm)))
 }
+
+
+ggpubr::ggarrange(f0, f1, f2,f3,
+          labels = c("A", "B", "C", "D"),
+          ncol = 2, nrow = 2)
