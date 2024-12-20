@@ -10,17 +10,18 @@ library(tidyverse)
 library(emmeans)
 library(broom)
 library(splines)
-
-
+library(mmrm)
+library(truncnorm)
 library(plyr)
-library(mice) # Multiple imputation
-library(miceadds)
-library(pan)
-library(longpower) # For power/sample size calculation for longitudinal data
+
+# library(mice) # Multiple imputation
+# library(miceadds)
+# library(pan)
+# library(longpower) # For power/sample size calculation for longitudinal data
 
 # Function to generate placebo progression
 #inputs
-
+source("placebo_model.R")
 M = c(0,6,12,18,24)
 n_pbo = 40
 n_act = 80
@@ -28,27 +29,11 @@ jitter_sd = 0.8 ### patients visit windows
 ncs_df = 2
 beta = c (3.4,11.3,3.7) # ncs time basis coefficients
 
-
-placeb_model <- function(M, n_pbo = 40, n_act = 80, ncs_df = 2, beta){
-  n = n_pbo + n_act
-  m = length(M)
-  visits <- tibble(visNo = 1:m, M)
-   subinfo <- tibble(id = 1:n)
-   group <- tibble(cbind(id = 1:n, tibble(group = c(rep(0, n_pbo), rep(1, n_act)))))
-  visinfo <- expand_grid(id = 1:n,visNo = 1:m) %>%  group_by(visNo)
-  d00 <- subinfo %>% left_join(visinfo, by="id") %>% left_join(visits, by="visNo") %>%
-    left_join(group, by="id")
- # ns_basis <- ns(d00$M,df=ncs_df)
-
-dd00 <- d00 %>% mutate(Mcat=as.factor(M), month = M, monthj = M+rnorm(m*n, mean = 0, jitter_sd) )%>%
-  mutate(baseline = ifelse(M > 0, 1, 0))
-dd0 <- model.matrix(~ id + visNo + Mcat+ ns(dd00$month, 2), dd00 ) %>% as_tibble() %>% select(-"(Intercept)") %>%
-  dplyr::rename(ns1 = `ns(dd00$month, 2)1`, ns2 = `ns(dd00$month, 2)2`) %>%
-  mutate(fixef0 = beta[1] + ns1*beta[2] + ns2*beta[3]) %>%
-  left_join(dd00, by = c('id', 'visNo'))
-return(dd0 = dd0)
-}
 # Monthj not used yet will do next
+
+# data generating functions
+
+# error using truncated normal
 
 corr = matrix(c(1,    0.65, 0.40, 0.25, 0.15,
                 0.65, 1,    0.65, 0.40, 0.25,
@@ -59,17 +44,21 @@ sd = c(1, 2, 2, 2, 2)
 
 delta1 = 0.3 # 30% reduction for times >0
 delta2 = 0.3 # 30% slower progression
+delta3 = 4 # x unit gradual reduction
 
 cov = diag(sd) %*% corr %*% diag(sd)
 error <-as.vector(matrix(t(mvtnorm::rmvnorm(n, mean = rep(0, m), sigma = cov))))
+error2 <-as.vector(
+  t(chol(corr) )%*%
+    t(sapply(sd, function(i) rtruncnorm(120, a = -.6, b = 4, mean = 0, sd = i))))
 
 
-dat <- placeb_model(M = c(0,6,12,18,24), beta = c (3.4,12,5))%>%
+dat <- placeb_model(M = c(0,6,12,18,24), beta = c (3.5,13,5))%>%
   group_by(id) %>%
   mutate(chg = fixef0 - fixef0[1L]) %>%
   ungroup()
- ggplot(data = dat, aes(x = month, y = fixef0, colour = as.factor(group), group = id)) +
-   geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) + theme_minimal()
+ggplot(data = dat, aes(x = month, y = fixef0, colour = as.factor(group), group = id)) +
+geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) + theme_minimal()
 
 #Null
 dat0 <- dat %>% mutate(y = fixef0 + error) %>%
@@ -84,6 +73,15 @@ dat0 <- dat %>% mutate(y = fixef0 + error) %>%
     scale_colour_discrete(name = "Group", labels = c("Placebo", "Treatment"))+
     xlab("Month") + ylab("FTLD CDR SB score")+ggtitle("Null Scenario")
 
+ #with independent truncated normal
+ dat02 <- dat %>% mutate(y = fixef0 + error2) %>%
+   mutate(y = plyr::round_any(y, 0.5))%>%
+   group_by(id) %>%
+   mutate(chg = y - y[1L]) %>% ungroup() %>%
+   ungroup() %>%
+   mutate(group = as.factor(group), id = as.factor(id))
+
+
 # 30% reduction for all times >0
   dat1 <- dat %>% mutate(chg = chg*(1-delta1*group))%>%
     group_by(id) %>% mutate(fixef0 = chg+fixef0[1L]) %>%
@@ -94,12 +92,20 @@ dat0 <- dat %>% mutate(y = fixef0 + error) %>%
     mutate(chg = y - y[1L]) %>% ungroup() %>%
     mutate(group = as.factor(group), id = as.factor(id))
 
-f1<-ggplot(data = dat1, aes(x = month, y = y, colour = as.factor(group), group = id)) + geom_line(lwd=.25)+
+  # 30% reduction for all times >0
+  dat12 <- dat %>% mutate(chg = chg*(1-delta1*group))%>%
+    group_by(id) %>% mutate(fixef0 = chg+fixef0[1L]) %>%
+    ungroup() %>%
+    mutate(y = fixef0 +error2 ) %>%
+    mutate(y = plyr::round_any(y, 0.5))%>%
+    group_by(id) %>%
+    mutate(chg = y - y[1L]) %>% ungroup() %>%
+    mutate(group = as.factor(group), id = as.factor(id))
+
+f1<-ggplot(data = dat12, aes(x = month, y = y, colour = as.factor(group), group = id)) + geom_line(lwd=.25)+
   geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) + theme(legend.position = "bottom")+
   scale_colour_discrete(name = "Group", labels = c("Placebo", "Treatment"))+
   xlab("Month") + ylab("FTLD CDR SB score")+ggtitle("30% Proportional reduction")
-
-
 
 # 30% slower progression
 dat2 <- dat %>% dplyr::group_by(id) %>%
@@ -117,52 +123,94 @@ dat2 <- dat %>% dplyr::group_by(id) %>%
   ungroup() %>%
   mutate(group = as.factor(group), id = as.factor(id))
 
-f2<-ggplot(data = dat2, aes(x = month, y = y, colour = as.factor(group), group = id)) + geom_line(lwd = .25)+
-geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2)  +
-  theme(legend.position = "bottom")+
-  scale_colour_discrete(name = "Group", labels = c("Placebo", "Treatment"))+
-  xlab("Month") + ylab("FTLD CDR SB score")+ggtitle("30% Slower Progression")
-
-
-# Linear drug effect and observe x% absolute reduction from placebo at time 24.
-# (reduction proportional to time ???)
-dat3 <- dat %>%
-  mutate(chg = chg*(1-spline(x = c(min(M), max(M)), y=c(.001, delta2),
-                             method = "natural", xout = c(0, 6, 12, 18, 24))$y*group))%>%
-  group_by(id) %>%
-  mutate(fixef0 = chg+fixef0[1L]) %>%
-  # mutate(y = fixef0*(1-spline(x = c(min(M), max(M)), y=c(.001, delta2),
-  #       method = "natural", xout = c(0, 6, 12, 18, 24))$y*group)) %>%
+dat22 <- dat %>% dplyr::group_by(id) %>%
+  mutate(y = spline(
+    x = M * (1 + delta2 * group),
+    y = fixef0     ,# c(3.4, 6.63, 9.02, 10.0, 10.1),
+    method = "natural",
+    xout = c(0, 6, 12, 18, 24)
+  )$y) %>%
   ungroup() %>%
-  mutate(y = fixef0 + error) %>%
+  mutate(y = y + error2) %>%
   mutate(y = plyr::round_any(y, 0.5))%>%
   group_by(id) %>%
   mutate(chg = y - y[1L]) %>%
   ungroup() %>%
   mutate(group = as.factor(group), id = as.factor(id))
 
-f3<-ggplot(data = dat3, aes(x = month, y = y, colour = as.factor(group), group = id)) + geom_line(lwd=.25)+
+f2<-ggplot(data = dat22, aes(x = month, y = y, colour = as.factor(group), group = id)) + geom_line(lwd = .25)+
+geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2)  +
+  theme(legend.position = "bottom")+
+  scale_colour_discrete(name = "Group", labels = c("Placebo", "Treatment"))+
+  xlab("Month") + ylab("FTLD CDR SB score")+ggtitle("30% Slower Progression")
+
+
+# Linear drug effect and observe delta3 unit absolute reduction from placebo at time 24.
+# decrease is linear over time
+# (reduction proportional to time ???)
+dat3 <- dat %>%
+  mutate(chg = chg - (spline(
+    x = c(min(M), max(M)),
+    y = c(0, delta3),
+    method = "natural",
+    xout = c(0, 6, 12, 18, 24)
+  )$y * group)) %>%
+  group_by(id) %>%
+  mutate(fixef0 = chg + fixef0[1L]) %>%
+  ungroup() %>%
+  mutate(y = fixef0 + error) %>%
+  mutate(y = plyr::round_any(y, 0.5)) %>%
+  group_by(id) %>%
+  mutate(chg = y - y[1L]) %>%
+  ungroup() %>%
+  mutate(group = as.factor(group), id = as.factor(id))
+
+
+dat32 <- dat %>%
+  mutate(chg = chg - (spline(
+    x = c(min(M), max(M)),
+    y = c(0, delta3),
+    method = "natural",
+    xout = c(0, 6, 12, 18, 24)
+  )$y * group)) %>%
+  group_by(id) %>%
+  mutate(fixef0 = chg + fixef0[1L]) %>%
+  ungroup() %>%
+  mutate(y = fixef0 + error2) %>%
+  mutate(y = plyr::round_any(y, 0.5)) %>%
+  group_by(id) %>%
+  mutate(chg = y - y[1L]) %>%
+  ungroup() %>%
+  mutate(group = as.factor(group), id = as.factor(id))
+
+
+f3<-ggplot(data = dat32, aes(x = month, y = y, colour = as.factor(group), group = id)) + geom_line(lwd=.25, alpha = .25)+
 geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) +
   theme(legend.position = "bottom")+
   scale_colour_discrete(name = "Group", labels = c("Placebo", "Treatment"))+
   xlab("Month") + ylab("FTLD CDR SB score")+ggtitle("30% gradual reduction")
 
 
-# Model Fits
-library(mmrm)
-library(broom)
+# Model Fits mmrm
+mmrm_fit <- function(dat = dat3)
 fit <- mmrm::mmrm(
   formula = chg ~ group*Mcat+ ar1(Mcat | id),
-  data = dat3,
+  data = dat32,
   control = mmrm_control(method = "Kenward-Roger")
 )
 
+
+
 # tests
-cov2cor((fit)$cov)
-summary(fit)
-lsm <-emmeans(fit, ~ group | Mcat, type = "response")
-tibble(as.data.frame(emmeans(fit, ~ group | Mcat, type = "response")[9:10])) %>% mutate(simno = 1)
-data.frame(confint(pairs(lsm, reverse = TRUE)))
+# cov2cor((fit)$cov)
+# summary(fit)
+# lsm <-emmeans(fit, ~ group | Mcat, type = "response")
+Overall_prop_change <- tibble(as.data.frame(emmeans(fit, ~ group | Mcat, type = "response")[9:10])) %>% mutate(simno = 1) %>%
+with(., round(1-.[2,3]/.[1,3], 2))
+pvalue <-  round( summary(fit)[["coefficients"]][10, 5], 5 )
+estimate<- round( summary(fit)[["coefficients"]][10, 1], 2 )
+
+#data.frame(confint(pairs(lsm, reverse = TRUE)))
 
 # do experiment#copied
 fit_data<- model.frame(fit)
