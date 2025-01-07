@@ -2,33 +2,42 @@
 # Yushuf Modified the code to fit the purpose
 # Date: 12-19-2024
 # Ref: https://www.researchgate.net/publication/362759985_Natural_cubic_splines_for_the_analysis_of_Alzheimer's_clinical_trials/fulltext/62fdaf84eb7b135a0e415754/Natural-cubic-splines-for-the-analysis-of-Alzheimers-clinical-trials.pdf?origin=scientificContributions
+require(lme4)
+require(tidyverse)
 
-Func_ncs_int <- function(dd1){
+ns21 <- function(t, data =dat1){
+  as.numeric(predict(splines::ns(data$month, df=2), t)[,1])
+}
+ns22 <- function(t, data =dat1){
+  as.numeric(predict(splines::ns(data$month, df=2), t)[,2])
+}
+
+Func_ncs_int <- function(dd1,last_visit = 24){
         fit_ncs_int <- lmer(Y ~
                                I(ns21(Month)) + I(ns22(Month)) +
-                               (I(ns21(Month)) + I(ns22(Month))):Active +
+                               (I(ns21(Month)) + I(ns22(Month))):group +
                                (1 | id),
-                       data = dd1)
+                       data = dat1)
 
 # Extract the fitted values and residuals
-dds <- dd1 %>%
+dds <- dat1 %>%
         mutate(fitted_values = fitted(fit_ncs_int),
                residuals = Y - fitted_values)
 
 # Identify the residuals corresponding to M54
-dd1_M54 <- dds %>% filter(M == 54)  # Assuming 'M' is the column indicating the month/time point
+dd1_M24 <- dds %>% filter(M == last_visit)  # Assuming 'M' is the column indicating the month/time point
 
 # Calculate the squared residuals
-dd1_M54 <- dd1_M54 %>%
+dd1_M54 <- dd1_M24 %>%
         mutate(squared_residuals = residuals^2)
 
 # Compute the mean square error (MSE) for M54
-MSE <- mean(dd1_M54$squared_residuals)
+MSE <- mean(dd1_M24$squared_residuals)
 
 out_ncs_ranslp <- ref_grid(fit_ncs_int,
                            at = list(
-                                   Month = 54,
-                                   Active = as.factor(0:1)),
+                                   Month = 24,
+                                   group = as.factor(0:1)),
                            data = dd1, mode = "satterthwaite",lmerTest.limit=15000) %>%
         emmeans(specs = 'Active', by = 'Month', lmerTest.limit=15000) %>%
         pairs(reverse=TRUE) %>%
