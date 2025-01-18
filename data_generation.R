@@ -1,4 +1,7 @@
+# Author: Yushuf Sharker
 # Data generation for treatment and placebo
+# This model uses the PMRM code to generate data
+
 sd = c(1, 1.5, 2, 2.5, 3)
 beta = c (5,12,5)
 delta1 = 0.3 # 30% reduction for times >0

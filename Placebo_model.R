@@ -15,6 +15,7 @@
 #' placeb_model(M, n_pbo = 40, n_act = 80, ncs_df = 2, beta)
 
 require (tidyverse)
+library(splines)
 placeb_model <- function(M, n_pbo = 40, n_act = 80, ncs_df = 2, beta) {
   n = n_pbo + n_act
   m = length(M)
