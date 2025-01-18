@@ -13,6 +13,8 @@ library(splines)
 library(mmrm)
 library(truncnorm)
 library(plyr)
+library(tmvtnorm)
+
 
 # library(mice) # Multiple imputation
 # library(miceadds)
@@ -59,17 +61,22 @@ corr = matrix(c(1,    0.65, 0.40, 0.25, 0.15,
 cov = diag(sd) %*% corr %*% diag(sd)
 m = length(M)
 n = n_pbo + n_act
-error <-as.vector(matrix(t(mvtnorm::rmvnorm(n, mean = rep(0, m), sigma = cov))))
 
-error2 <- as.vector(t(chol(corr)) %*%
-                      t(sapply(sd, function(i)
-                        truncnorm::rtruncnorm(
-                          120,
-                          a = -.6,
-                          b = 4,
-                          mean = 0,
-                          sd = i
-                        ))))
+error <- as.vector(matrix(t(
+  mvtnorm::rmvnorm(n, mean = rep(0, m), sigma = cov)
+)))
+
+error2 <- as.vector(matrix(t(
+  rtmvnorm(
+    n = n,
+    mean = rep(0, m),
+    sigma = cov,
+    lower = rep(-.6, m),
+    upper = rep(2, m)
+  )
+)))
+
+
 
 
 # Placebo model
@@ -247,7 +254,7 @@ dat32 <- dat %>%
 
 
 
-return(list(dat, dat0, dat02, dat1, dat12, dat2, dat22, dat3, dat32))
+return(list(dat0, dat02, dat1, dat12, dat2, dat22, dat3, dat32))
 }
 
 
