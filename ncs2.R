@@ -1,10 +1,8 @@
 # Vahe Khachadourian and his intern wrote the code as a part of the intern project
 # Yushuf Modified the code to fit the purpose
+# Dependency package spline, tidyverse, lme4, lmerTest, emmeans, mmrm
 # Date: 12-19-2024
 # Ref: https://www.researchgate.net/publication/362759985_Natural_cubic_splines_for_the_analysis_of_Alzheimer's_clinical_trials/fulltext/62fdaf84eb7b135a0e415754/Natural-cubic-splines-for-the-analysis-of-Alzheimers-clinical-trials.pdf?origin=scientificContributions
-require(lme4)
-require(tidyverse)
-require(lmertest)
 
 ns21 <- function(t){
   as.numeric(predict(splines::ns(dat$month, df=2), t)[,1])
@@ -48,21 +46,26 @@ Func_ncs_int <- function(data = dat1, last_visit = 24) {
             by = 'M',
             lmerTest.limit = 15000) #%>%
   prop_change_cs2 <- out_ncs_ranslp %>% as.data.frame() %>% tibble() %>%
-    with(., round(1 - .[2, 3] / .[1, 3], 2))
-  names(prop_change_cs2) <- "Prop"
+    with(., round(1 - .[2, 3] / .[1, 3], 2)) %>%
+    rename(c("emmean" = "Prop"))
+
+  dgm = unique(data["dgm"])
+  errm = unique(data["errm"])
 
   output <- bind_cols(
     prop_change_cs2,
     out_ncs_ranslp %>% pairs(reverse = TRUE) %>% as.data.frame() %>%
       mutate(
+        estimate = round(estimate, 2),
         #p.value_ratio = round(p.value, 5),
         mod = 'ncs-ranslp',
         #MSE=MSE,
         # SE.score = SE,
         # df.score = df,
         #t.ratio.score = t.ratio,
-        p.value.score = round(p.value, 2)
-      )%>% select(estimate, SE, p.value)
+        p.value.score = round(p.value, 5)
+      )%>% select(estimate, pvalue = p.value.score, model = mod), dgm, errm
+
   )
   return(output)
 }

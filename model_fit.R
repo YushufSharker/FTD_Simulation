@@ -16,6 +16,6 @@ mmrm_fit <- function(data = dat3) {
   dgm = unique(data["dgm"])
   errm = unique(data["errm"])
   return(tibble(prop_change_mmrm, estimate, pvalue, model, dgm, errm))
-  #return(tibble(c(prop_change = prop_change_mmrm$Prop, estimate = estimate, pvalue = pvalue, mod = 'MMRM')))
 }
 
+#Ref resource for MMRM https://cran.r-project.org/web/packages/mmrm/vignettes/introduction.html
