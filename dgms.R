@@ -12,6 +12,8 @@ library(broom)
 library(splines)
 library(mmrm)
 library(truncnorm)
+library(tmvtnorm)
+library(lme4)
       # library(plyr)
       # library(tmvtnorm)
       #

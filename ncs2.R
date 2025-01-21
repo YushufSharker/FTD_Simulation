@@ -47,8 +47,7 @@ Func_ncs_int <- function(data = dat1, last_visit = 24) {
             by = 'M',
             lmerTest.limit = 15000) #%>%
   prop_change_cs2 <- out_ncs_ranslp %>% as.data.frame() %>% tibble() %>%
-    with(., round(1 - .[2, 3] / .[1, 3], 2)) %>%
-    rename(c("emmean" = "Prop"))
+    with(., round(1 - .[2, 3] / .[1, 3], 2)) #%>% dplyr::rename(c("Prop"="emmean"))
 
   dgm = unique(data["dgm"])
   errm = unique(data["errm"])

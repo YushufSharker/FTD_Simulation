@@ -9,7 +9,7 @@ mmrm_fit <- function(data = dat3) {
 
   prop_change_mmrm <- tibble(as.data.frame(emmeans(fit, ~ group |
                             Mcat, type = "response")[9:10])) %>%
-    with(., round(1 - .[2, 3] / .[1, 3], 2)) %>% rename(c("emmean" = "Prop"))
+    with(., round(1 - .[2, 3] / .[1, 3], 2)) #%>% dplyr::rename(c("Prop" = "emmean"))
   estimate = round(summary(fit)[["coefficients"]][10, 1], 2)
   pvalue <-  round(summary(fit)[["coefficients"]][10, 5], 5)
   model = 'MMRM'

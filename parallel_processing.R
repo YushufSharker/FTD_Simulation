@@ -29,7 +29,7 @@ source("model_fit.R")
 
   sim_out <- bind_rows(
   do.call(rbind, lapply(sim_data, function(i) mmrm_fit(i))),
-  do.call(rbind, lapply(sim_data, function(i) Func_ncs_int(i)))
+  do.call(rbind, lapply(sim_data, function(i) Func_ncs_int(i, last_visit = 24)))
   )
   return(sim_out)
 }
@@ -74,18 +74,21 @@ parallel::clusterEvalQ(cl = cl,
                          require(mmrm)
                          require(truncnorm)
                          require(plyr)
-                         require(tmvtnorm)}
+                         require(tmvtnorm)
+                         }
   )
+
 sim_FTD_output<- bind_rows( #future_map_dfr under purrr and furrr lib
   parallel::parApply(
   cl = cl,
   X = matrix(1:nrow(sim.grid)),
   MARGIN = 1,
   FUN = function(x) {
-    lapply(1:5000, function(y) { # map_dfr
-      # mu_t=sim.grid$mu_c[x]-sim.grid$mu_c[x]*sim.grid$expected_reduction[x]
-      bind_rows(c(
-        sim(
+    lapply(1:5000, function(y) {
+      bind_rows(
+        c(
+        bind_cols(
+          sim(
           b0 = sim.grid$b0[x],
           b1 = sim.grid$b1[x],
           b2 = sim.grid$b2[x],
@@ -99,6 +102,7 @@ sim_FTD_output<- bind_rows( #future_map_dfr under purrr and furrr lib
           sd5 = sim.grid$sd5[x],
           n_pbo = sim.grid$npbo[x],
           n_act = sim.grid$nact[x]
+        ), do.call(rbind, (lapply(1:8, function(x) sim.grid[x,])))
         )
       ))
     })
@@ -108,7 +112,7 @@ sim_FTD_output<- bind_rows( #future_map_dfr under purrr and furrr lib
 parallel::stopCluster(cl)
 end_time <- Sys.time()
 runtime <- (end_time - start_time) # in hours
-save.image("./Outputs/tak594_FTD_SIM_01192025.RData")
+save.image("./Outputs/tak594_FTD_SIM_01202025.RData")
 
-
+# 5000 replication takes 22.40724 hours to run for 15 setup listed in the sim.grid
 
