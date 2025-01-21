@@ -12,42 +12,41 @@ library(broom)
 library(splines)
 library(mmrm)
 library(truncnorm)
-library(plyr)
-library(tmvtnorm)
-
-
-# library(mice) # Multiple imputation
-# library(miceadds)
-# library(pan)
-# library(longpower) # For power/sample size calculation for longitudinal data
-
-# Function to generate placebo progression
-#inputs
-source("placebo_model.R")
-b0 = 3.4
-b1=11.3
-b2 = 3.7
-# ncs time basis coefficients
-#sds fro 5 time points
-sd1 = 2
-sd2 = 2
-sd3 = 2
-sd4 = 3
-sd5 = 3
-
-delta1 = 0.3 # 30% reduction for times >0
-delta2 = 0.3 # 30% slower progression
-delta3 = 4 # x unit gradual reduction
-
-n_pbo = 40
-n_act = 80
-
+      # library(plyr)
+      # library(tmvtnorm)
+      #
+      #
+      # # library(mice) # Multiple imputation
+      # # library(miceadds)
+      # # library(pan)
+      # # library(longpower) # For power/sample size calculation for longitudinal data
+      #
+      # # Function to generate placebo progression
+      # #inputs
+      # source("placebo_model.R")
+      # b0 = 3.4
+      # b1=11.3
+      # b2 = 3.7
+      # # ncs time basis coefficients
+      # #sds fro 5 time points
+      # sd1 = 2
+      # sd2 = 2
+      # sd3 = 2
+      # sd4 = 3
+      # sd5 = 3
+      #
+      # delta1 = 0.3 # 30% reduction for times >0
+      # delta2 = 0.3 # 30% slower progression
+      # delta3 = 4 # x unit gradual reduction
+      #
+      # n_pbo = 40
+      # n_act = 80
+# jitter_sd = 0.8 ### patients visit windows
 dgm <- function(delta1 = 0.3, delta2 = 0.3, delta3 = 4, b0 = 3.4, b1=11.3, b2 = 3.7,
-                 n_pbo = 40, nact=80,
-                sd1 = 2, sd2 = 2, sd3 = 2, sd4 = 2, sd5 = 2  ){
+                 n_pbo = 40, n_act=80,
+                sd1 = 2, sd2 = 2, sd3 = 2, sd4 = 2, sd5 = 2, jitter_sd = 0.8){
 
 M = c(0,6,12,18,24)
-jitter_sd = 0.8 ### patients visit windows
 ncs_df = 2
 beta = c (b0, b1, b2)
 sd = c(sd1, sd2, sd3, sd4, sd5)

@@ -1,5 +1,6 @@
 # Codes for simulation function run
-library(tidyverse)
+start_time <- Sys.time()
+
 # Conditional power function (Pokok and Mehta modified code for sim)
 source("placebo_model.R")
 source("dgms.R")
@@ -15,7 +16,7 @@ source("model_fit.R")
                              b1 = 11.3,
                              b2 = 3.7,
                              n_pbo = 40,
-                             nact = 80,
+                             n_act = 80,
                              sd1 = 2,
                              sd2 = 2,
                              sd3 = 2,
@@ -23,7 +24,7 @@ source("model_fit.R")
                              sd5 = 2) {
   #Data generation
   sim_data <- dgm(delta1 = delta1, delta2 = delta2, delta3 = delta3, b0 = b0, b1 = b1, b2 = b2,
-      n_pbo = n_pbo, nact = nact, sd1 = sd1, sd2 = sd2, sd3 = sd3, sd4 = sd4, sd5 = sd5)
+      n_pbo = n_pbo, n_act = n_act, sd1 = sd1, sd2 = sd2, sd3 = sd3, sd4 = sd4, sd5 = sd5)
   #Model fitting
 
   sim_out <- bind_rows(
@@ -37,8 +38,8 @@ sim.grid <- expand.grid(b0 = 4,
                         b1 = seq(5, 14, length.out = 5),
                         b2 = seq(5, 7, length.out = 3),
                         delta1 = 0.3,
-                        delta3 = 0.3,
-                        delta4 = 4, # to expected reduction at the end of the time period
+                        delta2 = 0.3,
+                        delta3 = 4, # to expected reduction at the end of the time period
                         sd1 = 1,
                         sd2 = 2,
                         sd3 = 2,
@@ -61,25 +62,27 @@ parallel::clusterExport(cl = cl,
                                     "sim.grid",
                                     "sim")
                         )
+
 parallel::clusterEvalQ(cl = cl,
-                       expr = {require(mvtnorm)
+                       expr = {
+                         require(mvtnorm)
                          require(lme4)
                          require(lmertest)
-                         library(emmeans)
-                         library(broom)
-                         library(splines)
-                         library(mmrm)
-                         library(truncnorm)
-                         library(plyr)
-                         library(tmvtnorm)
-  })
+                         require(emmeans)
+                         require(broom)
+                         require(splines)
+                         require(mmrm)
+                         require(truncnorm)
+                         require(plyr)
+                         require(tmvtnorm)}
+  )
 sim_FTD_output<- bind_rows( #future_map_dfr under purrr and furrr lib
   parallel::parApply(
   cl = cl,
   X = matrix(1:nrow(sim.grid)),
   MARGIN = 1,
   FUN = function(x) {
-    lapply(1:1, function(y) { # map_dfr
+    lapply(1:5000, function(y) { # map_dfr
       # mu_t=sim.grid$mu_c[x]-sim.grid$mu_c[x]*sim.grid$expected_reduction[x]
       bind_rows(c(
         sim(
@@ -95,15 +98,17 @@ sim_FTD_output<- bind_rows( #future_map_dfr under purrr and furrr lib
           sd4 = sim.grid$sd4[x],
           sd5 = sim.grid$sd5[x],
           n_pbo = sim.grid$npbo[x],
-          nact = sim.grid$nact[x],
-        ),
+          n_act = sim.grid$nact[x]
+        )
       ))
     })
   }
 ))
-parallel::stopCluster(cl)
 
-save.image("./Output/tak594_FTD_SIM_01192025.RData")
+parallel::stopCluster(cl)
+end_time <- Sys.time()
+runtime <- (end_time - start_time) # in hours
+save.image("./Outputs/tak594_FTD_SIM_01192025.RData")
 
 
 

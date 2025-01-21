@@ -2,6 +2,7 @@
 #'
 #' This function generates a dataset for a placebo-controlled study with specified parameters.
 #'
+#' @dpendence tidyverse and splines
 #' @param M A numeric vector representing the months or time points.
 #' @param n_pbo An integer specifying the number of subjects in the placebo group. Default is 40.
 #' @param n_act An integer specifying the number of subjects in the active treatment group. Default is 80.
@@ -14,9 +15,7 @@
 #' beta <- c(0.5, 1.2, -0.8)
 #' placeb_model(M, n_pbo = 40, n_act = 80, ncs_df = 2, beta)
 
-require (tidyverse)
-library(splines)
-placeb_model <- function(M, n_pbo = 40, n_act = 80, ncs_df = 2, beta) {
+placeb_model <- function(M, n_pbo = 40, n_act = 80, ncs_df = 2, beta, jitter_sd = 0.8) {
   n = n_pbo + n_act
   m = length(M)
   visits <- tibble(visNo = 1:m, M)

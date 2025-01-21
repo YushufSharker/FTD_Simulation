@@ -4,15 +4,16 @@
 # Date: 12-19-2024
 # Ref: https://www.researchgate.net/publication/362759985_Natural_cubic_splines_for_the_analysis_of_Alzheimer's_clinical_trials/fulltext/62fdaf84eb7b135a0e415754/Natural-cubic-splines-for-the-analysis-of-Alzheimers-clinical-trials.pdf?origin=scientificContributions
 
-ns21 <- function(t){
-  as.numeric(predict(splines::ns(dat$month, df=2), t)[,1])
-}
-ns22 <- function(t){
-  as.numeric(predict(splines::ns(dat$month, df=2), t)[,2])
-}
-
 
 Func_ncs_int <- function(data = dat1, last_visit = 24) {
+
+  ns21 <- function(t){
+    as.numeric(predict(splines::ns(data$month, df=2), t)[,1])
+  }
+  ns22 <- function(t){
+    as.numeric(predict(splines::ns(data$month, df=2), t)[,2])
+  }
+
     fit_ncs_int <- lmer(chg ~
                         I(ns21(M)) +
                         I(ns22(M)) +
@@ -21,7 +22,7 @@ Func_ncs_int <- function(data = dat1, last_visit = 24) {
                         (1 | id), data = data)
 
   # Extract the fitted values and residuals
-  dds <- dat1 %>%
+  dds <- data %>%
     mutate(fitted_values = fitted(fit_ncs_int),
            residuals = chg - fitted_values)
 
