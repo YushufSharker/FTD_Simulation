@@ -2,14 +2,22 @@
 # Data generation for treatment and placebo
 # This model uses the PMRM code to generate data
 
-sd = c(1, 1.5, 2, 2.5, 3)
-beta = c (5,12,5)
+sd = c(2, 3, 4, 5, 6)
+beta = c (5,18,8)
 delta1 = 0.3 # 30% reduction for times >0
 delta2 = 0.3 # 30% slower progression
 delta3 = 0.3 # 30% gradual reduction
+    nhm1 = 3.4
+    nhm2 = 6.5
+    nhm3 = 8.9
+    nhm4 = 9.9
+    nhm5 = 10.1
+    n_pbo = 40
+    n_act = 80
 
 datgen <- function(sd=c(1, 2, 2, 2, 2), delta1 = .3, delta2 = .3, beta = c (5,13,5)){
-
+    Nhmean = c(nhm1, nhm2, nhm3, nhm4, nhm5)
+    n = n_pbo + n_act
 corr = matrix(c(1,    0.65, 0.40, 0.25, 0.15,
                 0.65, 1,    0.65, 0.40, 0.25,
                 0.40, 0.65, 1,    0.65, 0.40,
@@ -18,20 +26,30 @@ corr = matrix(c(1,    0.65, 0.40, 0.25, 0.15,
 cov = diag(sd) %*% corr %*% diag(sd)
 error <-as.vector(matrix(t(mvtnorm::rmvnorm(n, mean = rep(0, m), sigma = cov))))
 
-dat <- placeb_model(M = c(0,6,12,18,24), beta = beta)%>%
+
+dat <- placeb_model(M = c(0,6,12,18,24), beta = beta, jitter_sd = 0)%>%
   group_by(id) %>%
   mutate(chg = fixef0 - fixef0[1L]) %>%
   ungroup()
 ggplot(data = dat, aes(x = month, y = fixef0, colour = as.factor(group), group = id)) +
   geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) + theme_minimal()
 
-#Null
+#Null nby NCS
 dat0 <- dat %>% mutate(y = fixef0 + error) %>%
   mutate(y = plyr::round_any(y, 0.5))%>%
   group_by(id) %>%
   mutate(chg = y - y[1L]) %>% ungroup() %>%
   ungroup() %>%
   mutate(group = as.factor(group), id = as.factor(id))
+
+# Null By natural history
+dat0N <- dat %>%
+  mutate(error = error) %>% group_by(id) %>%
+  mutate(y =  Nhmean+error) %>%
+  ungroup() %>%
+  mutate(y = plyr::round_any(y, 0.5),
+         dgm = "NULL",
+         errm = "N")
 
 # f0 <- ggplot(data = dat0, aes(
 #   x = month,
