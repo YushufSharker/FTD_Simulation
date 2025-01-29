@@ -24,7 +24,6 @@ placeb_model <- function(M, n_pbo = 40, n_act = 80, ncs_df = 2, beta, jitter_sd 
   visinfo <- expand_grid(id = 1:n, visNo = 1:m) %>% group_by(visNo)
   d00 <- subinfo %>% left_join(visinfo, by = "id") %>% left_join(visits, by = "visNo") %>%
     left_join(group, by = "id")
-  # ns_basis <- ns(d00$M, df = ncs_df)
 
   dd00 <- d00 %>% mutate(Mcat = as.factor(M), month = M, monthj = M + rnorm(m * n, mean = 0, jitter_sd)) %>%
     mutate(baseline = ifelse(M > 0, 1, 0))
