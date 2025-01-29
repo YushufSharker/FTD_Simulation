@@ -30,7 +30,14 @@ library(lme4)
       # b1=11.3
       # b2 = 3.7
       # # ncs time basis coefficients
-      # #sds fro 5 time points
+      #
+      # nhm1 = 3.4
+      # nhm2 = 6.5
+      # nhm3 = 8.9
+      # nhm4 = 9.9
+      # nhm5 = 10.1
+
+      #sds fro 5 time points
       # sd1 = 2
       # sd2 = 2
       # sd3 = 2
@@ -44,9 +51,33 @@ library(lme4)
       # n_pbo = 40
       # n_act = 80
 # jitter_sd = 0.8 ### patients visit windows
-dgm <- function(delta1 = 0.3, delta2 = 0.3, delta3 = 4, b0 = 3.4, b1=11.3, b2 = 3.7,
-                 n_pbo = 40, n_act=80,
-                sd1 = 2, sd2 = 2, sd3 = 2, sd4 = 2, sd5 = 2, jitter_sd = 0.8){
+dgm <- function(delta1 = 0.3,
+                delta2 = 0.6,
+                delta3 = 4,
+                b0 = 3.4,
+                b1 = 11.3,
+                b2 = 3.7,
+                nhm1 = 3.4,
+                nhm2 = 6.5,
+                nhm3 = 8.9,
+                nhm4 = 9.9,
+                nhm5 = 10.1,
+                n_pbo = 40,
+                n_act = 80,
+                sd1 = 2,
+                sd2 = 2,
+                sd3 = 2,
+                sd4 = 2,
+                sd5 = 2,
+                jitter_sd = 0,
+                missingPercentage = .1,
+                mtP1 = 0.05,
+                mtP2 = 0.1,
+                mtP3 = 0.2,
+                mtP4 = 0.3,
+                mtP5 = 0.4) {
+
+Nhmean = c(nhm1, nhm2, nhm3, nhm4, nhm5)
 
 M = c(0,6,12,18,24)
 ncs_df = 2
@@ -67,15 +98,15 @@ error <- as.vector(matrix(t(
   mvtnorm::rmvnorm(n, mean = rep(0, m), sigma = cov)
 )))
 
-error2 <- as.vector(matrix(t(
-  rtmvnorm(
-    n = n,
-    mean = rep(0, m),
-    sigma = cov,
-    lower = rep(-.6, m),
-    upper = rep(2, m)
-  )
-)))
+# error2 <- as.vector(matrix(t(
+#   rtmvnorm(
+#     n = n,
+#     mean = rep(0, m),
+#     sigma = cov,
+#     lower = rep(-.6, m),
+#     upper = rep(2, m)
+#   )
+# )))
 
 
 # Placebo model
@@ -84,16 +115,35 @@ dat <- placeb_model(M = c(0,6,12,18,24), beta = c (2.5,14,5))%>%
   mutate(chg = fixef0 - fixef0[1L]) %>%
   ungroup()
 
-#Null
+#Null by NCS
 dat0 <- dat %>% mutate(y = fixef0 + error) %>%
   mutate(y = plyr::round_any(y, 0.5),
          dgm = "NULL",
-         errm = "N")%>%
+         errm = "N",
+         misrate = 0)%>%
   group_by(id) %>%
   mutate(chg = y - y[1L]) %>% ungroup() %>%
-    ungroup() %>%
-    mutate(group = as.factor(group), id = as.factor(id))
+  mutate(group = as.factor(group), id = as.factor(id))
 
+#Null by NCS with x% missing
+dat0m<- introduce_missing(df = dat0, outVariable = "chg",
+                          missing_percentage = missingPercentage,
+                          prob = c(mtP1, mtP2, mtP3, mtP4, mtP5)) %>%
+  mutate(misrate = missingPercentage)
+
+
+# Null by Natural history
+dat0N <- dat %>%
+  mutate(error = error) %>% group_by(id) %>%
+  mutate(y =  Nhmean+error) %>%
+  ungroup() %>%
+  mutate(y = plyr::round_any(y, 0.5),
+         dgm = "NULL_N",
+         errm = "N",
+         misrate = 0)%>%
+  group_by(id) %>%
+  mutate(chg = y - y[1L]) %>% ungroup() %>% select(-error) %>%
+  mutate(group = as.factor(group), id = as.factor(id))
 
  #with independent truncated normal
      # dat02 <- dat %>% mutate(y = fixef0 + error2) %>%
@@ -105,11 +155,18 @@ dat0 <- dat %>% mutate(y = fixef0 + error) %>%
      #   ungroup() %>%
      #   mutate(group = as.factor(group), id = as.factor(id))
 
+#Null by Natural history with x% missing
+dat0Nm<- introduce_missing(df = dat0N, outVariable = "chg",
+                          missing_percentage = missingPercentage,
+                          prob = c(mtP1, mtP2, mtP3, mtP4, mtP5)) %>%
+  mutate(misrate = missingPercentage)
+
 
 # 30% proportional reduction
   dat1 <- dat %>% mutate(chg = chg*(1-delta1*group),
                          dgm = "PR",
-                         errm = "N") %>%
+                         errm = "N",
+                         misrate = 0) %>%
     group_by(id) %>% mutate(fixef0 = chg+fixef0[1L]) %>%
     ungroup() %>%
     mutate(y = fixef0 +error ) %>%
@@ -130,6 +187,11 @@ dat0 <- dat %>% mutate(y = fixef0 + error) %>%
       #   mutate(chg = y - y[1L]) %>% ungroup() %>%
       #   mutate(group = as.factor(group), id = as.factor(id))
 
+#30% proportional reduction with x% missing
+  dat1m<- introduce_missing(df = dat1, outVariable = "chg",
+                             missing_percentage = missingPercentage,
+                             prob = c(mtP1, mtP2, mtP3, mtP4, mtP5)) %>%
+    mutate(misrate = missingPercentage)
 
 
 # 30% slower progression
@@ -139,13 +201,12 @@ dat0 <- dat %>% mutate(y = fixef0 + error) %>%
       mutate(y= spline(x = x, y = fixef0, method = "natural", xout = M)$y)
     return(df)
   }
-
-
   dat2i <- do.call(rbind, lapply(split(dat, f = dat$id), function(i) spline_interpolation(i)))
   dat2<-dat2i %>% select(-x) %>%
   mutate(y = y + error,
          dgm = "SP",
-         errm = "N") %>%
+         errm = "N",
+         misrate = 0) %>%
   mutate(y = plyr::round_any(y, 0.5))%>%
   group_by(id) %>%
   mutate(chg = y - y[1L]) %>%
@@ -163,10 +224,17 @@ dat0 <- dat %>% mutate(y = fixef0 + error) %>%
       # ungroup() %>%
       # mutate(group = as.factor(group), id = as.factor(id))
 
+# 30% slower progression with x% missing
+dat2m<- introduce_missing(df = dat2, outVariable = "chg",
+                            missing_percentage = missingPercentage,
+                            prob = c(mtP1, mtP2, mtP3, mtP4, mtP5)) %>%
+    mutate(misrate = missingPercentage)
+
 
 # Linear drug effect and observe delta3 unit absolute reduction from placebo at time 24.
 # decrease is linear over time
 # (reduction proportional to time ???)
+
 dat3 <- dat %>%
   mutate(chg = chg - (spline(
     x = c(min(M), max(M)),
@@ -206,8 +274,17 @@ dat3 <- dat %>%
     #   mutate(group = as.factor(group), id = as.factor(id), ,
     #          dgm = "TP",
     #          errm = "TN")
+# Linear drug effect and observe delta3 unit absolute reduction from placebo at time 24.
+# decrease is linear over time
+# (reduction proportional to time ???)
+# X% missing
+dat3m<- introduce_missing(df = dat3, outVariable = "chg",
+                          missing_percentage = missingPercentage,
+                          prob = c(mtP1, mtP2, mtP3, mtP4, mtP5)) %>%
+  mutate(misrate = missingPercentage)
 
-return(list(dat0, dat1, dat2, dat3))
+
+return(list(dat0, dat0N, dat1, dat2, dat3))
 }
 
 
