@@ -6,7 +6,8 @@
 # Data needs to contain the following columns: id, time, response(outVariable)
 # assign probability weight for each time point to be missing
 
-introduce_missing <- function(df, outVariable = "response",
+introduce_missing <- function(df,
+                              outVariable = "response",
                               missing_percentage = 0.1,
                               prob = c(0.05, 0.1, 0.2, 0.3, 0.4)) {
   set.seed(123)  # For reproducibility
@@ -17,7 +18,7 @@ introduce_missing <- function(df, outVariable = "response",
   for (id in missing_subjects) {
     subject_rows <- which(df$id == id)
     missing_start <- sample(subject_rows, 1, prob = prob)
-    df[missing_start:max(subject_rows), variable] <- NA
+    df[missing_start:max(subject_rows), outVariable] <- NA
   }
   return(df)
 }

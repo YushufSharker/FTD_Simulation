@@ -25,20 +25,20 @@ Func_ncs_int <- function(data = dat1, last_visit = 24) {
                         )
   sing <- ifelse(isSingular(fit_ncs_int) == TRUE, "Singular", "Non-Singular")
   wtext <- names(warnings())
-  # Extract the fitted values and residuals
-  dds <- data %>%
-    mutate(fitted_values = fitted(fit_ncs_int),
-           residuals = chg - fitted_values)
-
-  # Identify the residuals corresponding to M24
-  dd1_M24 <- dds %>% filter(M == last_visit)  # Assuming 'M' is the column indicating the month/time point
-
-  # Calculate the squared residuals
-  dd1_M24 <- dd1_M24 %>%
-    mutate(squared_residuals = residuals ^ 2)
-
-  # Compute the mean square error (MSE) for M54
-  MSE <- mean(dd1_M24$squared_residuals)
+        # # Extract the fitted values and residuals
+        # dds <- data %>%
+        #   mutate(fitted_values = fitted(fit_ncs_int),
+        #          residuals = chg - fitted_values)
+        #
+        # # Identify the residuals corresponding to M24
+        # dd1_M24 <- dds %>% filter(M == last_visit)  # Assuming 'M' is the column indicating the month/time point
+        #
+        # # Calculate the squared residuals
+        # dd1_M24 <- dd1_M24 %>%
+        #   mutate(squared_residuals = residuals ^ 2)
+        #
+        # # Compute the mean square error (MSE) for M54
+        # MSE <- mean(dd1_M24$squared_residuals)
 
   # out_ncs_ranslp <- ref_grid(fit_ncs_int,
   #                            at = list(M = 24,group = as.factor(0:1)),
@@ -63,15 +63,16 @@ Func_ncs_int <- function(data = dat1, last_visit = 24) {
             lmerTest.limit = 2000) #%>%
 
   prop_change_cs2 <- out_ncs_ranslp %>% as.data.frame() %>% tibble() %>%
-    with(., round(1 - .[2, 2] / .[1, 2], 2)) %>% dplyr::rename(c("Prop"="emmean"))
+    with(., round(1 - .[2, 2] / .[1, 2], 2)) #%>% dplyr::rename(c("Prop"="emmean"))
 
   dgm = unique(data["dgm"])
   errm = unique(data["errm"])
+  misrate = unique(data["misrate"])
   w1 = get_phrase(wtext, "unidentifiable")
   w2 = get_phrase(wtext, "failed to converge")
 
   output <- bind_cols(
-    dgm, errm,prop_change_cs2,
+    dgm, errm, misrate, prop_change_cs2,
     out_ncs_ranslp %>% pairs(reverse = TRUE) %>% as.data.frame() %>%
       mutate(
         estimate = round(estimate, 2),
@@ -82,11 +83,11 @@ Func_ncs_int <- function(data = dat1, last_visit = 24) {
         # df.score = df,
         #t.ratio.score = t.ratio,
         #p.value.score = round(p.value, 5),
-        singularity = sing,
-        war1 = w1,
-        war2 = w2
-      )%>% select(estimate, pvalue = p.value_ratio, model = mod, singularity,
-                  war1, war2)
+        sing = sing,
+        w1 = w1,
+        w2 = w2
+      )%>% select(estimate, pvalue = p.value_ratio, model = mod, sing,
+                  w1, w2)
 
   )
   return(output)

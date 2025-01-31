@@ -69,6 +69,16 @@ dgm <- function(delta1 = 0.3,
                 sd3 = 2,
                 sd4 = 2,
                 sd5 = 2,
+                # r12= 0.65,
+                # r13= 0.40,
+                # r14= 0.25,
+                # r15= 0.15,
+                # r23= 0.65,
+                # r24= 0.40,
+                # r25= 0.25,
+                # r35= 0.65,
+                # r45= 0.65,
+                cor = 0.65,
                 jitter_sd = 0,
                 missingPercentage = .1,
                 mtP1 = 0.05,
@@ -78,18 +88,14 @@ dgm <- function(delta1 = 0.3,
                 mtP5 = 0.4) {
 
 Nhmean = c(nhm1, nhm2, nhm3, nhm4, nhm5)
-
+# paired_correlations = c(r12, r13, r14, r15, r12, r13, r14, r12, r13, r12)
 M = c(0,6,12,18,24)
 ncs_df = 2
 beta = c (b0, b1, b2)
 sd = c(sd1, sd2, sd3, sd4, sd5)
 
-corr = matrix(c(1,    0.65, 0.40, 0.25, 0.15,
-                0.65, 1,    0.65, 0.40, 0.25,
-                0.40, 0.65, 1,    0.65, 0.40,
-                0.25, 0.40, 0.65, 1,    0.65,
-                0.15, 0.25, 0.40, 0.65, 1   ),  nrow = 5, byrow = TRUE)
-
+#corr = usCorrelation(correlations = paired_correlations)
+corr = autocorr.mat(p = 5, rho = cor)
 cov = diag(sd) %*% corr %*% diag(sd)
 m = length(M)
 n = n_pbo + n_act
@@ -252,7 +258,8 @@ dat3 <- dat %>%
   ungroup() %>%
   mutate(group = as.factor(group), id = as.factor(id),
          dgm = "TP",
-         errm = "N")
+         errm = "N",
+         misrate = 0)
 
 
     # With truncated normal
@@ -284,7 +291,7 @@ dat3m<- introduce_missing(df = dat3, outVariable = "chg",
   mutate(misrate = missingPercentage)
 
 
-return(list(dat0, dat0N, dat1, dat2, dat3))
+return(list(dat0, dat0m, dat0N, dat0Nm, dat1, dat1m, dat2, dat2m, dat3, dat3m))
 }
 
 
