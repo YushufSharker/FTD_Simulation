@@ -26,13 +26,13 @@ corr = matrix(c(1,    0.65, 0.40, 0.25, 0.15,
 cov = diag(sd) %*% corr %*% diag(sd)
 error <-as.vector(matrix(t(mvtnorm::rmvnorm(n, mean = rep(0, m), sigma = cov))))
 
-
+beta = c (5,14,9)
 dat <- placeb_model(M = c(0,6,12,18,24), beta = beta, jitter_sd = 0)%>%
   group_by(id) %>%
   mutate(chg = fixef0 - fixef0[1L]) %>%
   ungroup()
 ggplot(data = dat, aes(x = month, y = fixef0, colour = as.factor(group), group = id)) +
-  geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) + theme_minimal()
+  geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2)
 
 #Null nby NCS
 dat0 <- dat %>% mutate(y = fixef0 + error) %>%
