@@ -90,7 +90,7 @@ sim.grid <- expand.grid(b0 = c(4),
 
 # Parallel processing function
 source("goparallel.R")
-goparallel(ncores = 10)
+goparallel(ncores = 11)
 
 #### Run Parallel processing
 parallel::clusterExport(cl = cl,
