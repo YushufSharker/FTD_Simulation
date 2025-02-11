@@ -52,7 +52,7 @@ library(lme4)
       # n_act = 80
 # jitter_sd = 0.8 ### patients visit windows
 dgm <- function(delta1 = 0.3,
-                delta2 = 0.6,
+                delta2 = 0.7,
                 delta3 = 4,
                 b0 = 3.4,
                 b1 = 11.3,
@@ -65,10 +65,10 @@ dgm <- function(delta1 = 0.3,
                 n_pbo = 40,
                 n_act = 80,
                 sd1 = 2,
-                sd2 = 2,
-                sd3 = 2,
-                sd4 = 2,
-                sd5 = 2,
+                sd2 = 3,
+                sd3 = 4,
+                sd4 = 5,
+                sd5 = 6,
                 # r12= 0.65,
                 # r13= 0.40,
                 # r14= 0.25,
@@ -200,13 +200,15 @@ dat0Nm<- introduce_missing(df = dat0N, outVariable = "chg",
     mutate(misrate = missingPercentage)
 
 
+
 # 30% slower progression
   spline_interpolation <- function(df) {
-    delta2 = .3
+    delta2 = delta2
     df= df %>% mutate(x = M * (1 + delta2 * group))%>%
       mutate(y= spline(x = x, y = fixef0, method = "natural", xout = M)$y)
     return(df)
   }
+
   dat2i <- do.call(rbind, lapply(split(dat, f = dat$id), function(i) spline_interpolation(i)))
   dat2<-dat2i %>% select(-x) %>%
   mutate(y = y + error,

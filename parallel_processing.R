@@ -126,10 +126,10 @@ parallel::clusterEvalQ(cl = cl,
 sim_FTD_output<- bind_rows( #future_map_dfr under purrr and furrr lib
   parallel::parApply(
   cl = cl,
-  X = matrix(1: nrow(sim.grid)),#10),
+  X = matrix(1: c(1,5,7,9,11,13, 20, 25, 50, 60)), #nrow(sim.grid)),#10),
   MARGIN = 1,
   FUN = function(x) {
-    lapply(1:500, function(y) {
+    lapply(1:100, function(y) {
       bind_rows(
         c(
         bind_cols(

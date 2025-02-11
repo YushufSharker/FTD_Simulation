@@ -18,7 +18,7 @@ Func_ncs_int <- function(data = dat1, last_visit = 24) {
                         I(ns21(month)) +
                         I(ns22(month)) +
                         (I(ns21(month)) +
-                         I(ns22(month))):group +
+                         I(ns22(month)))*group +
                         (1| id),
                         data = data,
                         control = lmerControl(check.nobs.vs.nRE = "ignore")

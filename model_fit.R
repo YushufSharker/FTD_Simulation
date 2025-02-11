@@ -2,7 +2,7 @@
 # Model Fits mmrm
 mmrm_fit <- function(data = dat3) {
   fit <- mmrm::mmrm(
-    formula = chg ~ group * Mcat + ar1(Mcat | id),
+    formula = y ~ group * Mcat + ar1(Mcat | id),
     data = data,
     control = mmrm_control(method = "Kenward-Roger", accept_singular = TRUE)
   )
