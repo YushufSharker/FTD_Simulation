@@ -13,7 +13,7 @@ source("cormatsim.R")
 
 # simulation function
   sim <- function(delta1 = 0.3,
-                  delta2 = 0.6,
+                  delta2 = 0.5,
                   delta3 = 4,
                   b0 = 3.4,
                   b1 = 11.3,
@@ -26,10 +26,10 @@ source("cormatsim.R")
                   n_pbo = 40,
                   n_act = 80,
                   sd1 = 2,
-                  sd2 = 2,
-                  sd3 = 2,
-                  sd4 = 2,
-                  sd5 = 2,
+                  sd2 = 3,
+                  sd3 = 4,
+                  sd4 = 5,
+                  sd5 = 6,
                   # r12= 0.65,
                   # r13= 0.40,
                   # r14= 0.25,
@@ -40,7 +40,7 @@ source("cormatsim.R")
                   # r35= 0.65,
                   # r45= 0.65,
                   cor = 0.65,
-                  jitter_sd = 0,
+                  jitter_sd = .8,
                   missingPercentage = .1,
                   mtP1 = 0.05,
                   mtP2 = 0.1,
@@ -53,7 +53,7 @@ source("cormatsim.R")
   sim_data <- dgm(delta1 = delta1, delta2 = delta2, delta3 = delta3, b0 = b0, b1 = b1, b2 = b2,
       n_pbo = n_pbo, n_act = n_act, sd1 = sd1, sd2 = sd2, sd3 = sd3, sd4 = sd4, sd5 = sd5,
       cor = cor, jitter_sd = jitter_sd, missingPercentage = missingPercentage,
-      mtP1 = mtP1, mtP2 = mtP2, mtP3 = mtP3, mtP4 = mtP4, mtP5 = mtP4)
+      mtP1 = mtP1, mtP2 = mtP2, mtP3 = mtP3, mtP4 = mtP4, mtP5 = mtP5)
   #Model fitting
 
   sim_out <- bind_rows(
@@ -87,6 +87,8 @@ sim.grid <- expand.grid(b0 = c(4),
 ) %>% filter(!(b1 %in% c(17:25) & b2 ==5 )) %>%
   filter(!(b1 %in% c(19:25) & b2 ==7 )) %>%
   filter(mtP1 == 0.05, mtP2 == 0.05, mtP3 == 0.2, mtP4 == 0.3, mtP5 == 0.4)
+
+sim.grid <- sim.grid[c(5, 10,50,60),]
 
 # Parallel processing function
 source("goparallel.R")
@@ -123,10 +125,11 @@ parallel::clusterEvalQ(cl = cl,
                          }
   )
 
+
 sim_FTD_output<- bind_rows( #future_map_dfr under purrr and furrr lib
   parallel::parApply(
   cl = cl,
-  X = matrix(1: c(1,5,7,9,11,13, 20, 25, 50, 60)), #nrow(sim.grid)),#10),
+  X = matrix(1: nrow(sim.grid)),#10),
   MARGIN = 1,
   FUN = function(x) {
     lapply(1:100, function(y) {
@@ -165,7 +168,7 @@ sim_FTD_output<- bind_rows( #future_map_dfr under purrr and furrr lib
 parallel::stopCluster(cl)
 end_time <- Sys.time()
 runtime <- (end_time - start_time) # in hours
-save.image("./Outputs/tak594_FTD_SIM_01312025.RData")
+save.image("./Outputs/tak594_FTD_SIM_02112025.RData")
 
 # 5000 replication takes 22.40724 hours to run for 15 setup listed in the sim.grid
 

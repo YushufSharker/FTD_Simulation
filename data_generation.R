@@ -71,15 +71,29 @@ dat1 <- dat %>% mutate(chg = chg*(1-delta1*group))%>%
   mutate(chg = y - y[1L]) %>% ungroup() %>%
   mutate(group = as.factor(group), id = as.factor(id))
 
-# f1 <- ggplot(data = dat1, aes(
-#   x = month,
-#   y = y,
-#   colour = as.factor(group),
-#   group = id
-# )) + geom_line(lwd = .25) +
-#   geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) + theme(legend.position = "bottom") +
-#   scale_colour_discrete(name = "Group", labels = c("Placebo", "Treatment")) +
-#   xlab("Month") + ylab("FTLD CDR SB score") + ggtitle("30% Proportional reduction")
+dat1 <- dat %>% mutate(y = fixef0*(1-delta1*group))%>%
+  group_by(id) %>%
+  mutate(y = if_else(row_number() == 1, fixef0[1L], y))%>%
+  ungroup()%>%
+  mutate(y = y + error)%>%
+  #mutate(chg = chg*(1-delta1*group))%>% # this code line was returning same data repeatedly
+  # group_by(id) %>% mutate(fixef0 = chg+fixef0[1L]) %>%
+  # ungroup() %>%
+  #mutate(y = fixef0 +error ) %>%
+  #mutate(y = plyr::round_any(y, 0.5))%>%
+  group_by(id) %>%
+  mutate(chg = y - y[1L]) %>% ungroup() %>%
+  mutate(group = as.factor(group), id = as.factor(id))
+
+f1 <- ggplot(data = dat1, aes(
+  x = month,
+  y = chg,
+  colour = as.factor(group),
+  group = id
+)) + geom_line(lwd = .25) +
+  geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) + theme(legend.position = "bottom") +
+  scale_colour_discrete(name = "Group", labels = c("Placebo", "Treatment")) +
+  xlab("Month") + ylab("FTLD CDR SB score") + ggtitle("30% Proportional reduction")
 
 # 30% slower progression
 dat2 <- dat %>% dplyr::group_by(id) %>%
@@ -112,34 +126,38 @@ dat2 <- dat %>% dplyr::group_by(id) %>%
 
 # Linear drug effect and observe x% absolute reduction from placebo at time 24.
 # (reduction proportional to time ???)
+
 dat3 <- dat %>%
-  mutate(chg = chg * (1 - spline(
-    x = c(min(M), max(M)),
-    y = c(.001, delta3),
-    method = "natural",
-    xout = c(0, 6, 12, 18, 24)
-  )$y * group)) %>%
-  group_by(id) %>%
-  mutate(fixef0 = chg + fixef0[1L]) %>%
-  # mutate(y = fixef0*(1-spline(x = c(min(M), max(M)), y=c(.001, delta2),
-  #       method = "natural", xout = c(0, 6, 12, 18, 24))$y*group)) %>%
-  ungroup() %>%
-  mutate(y = fixef0 + error) %>%
+  # mutate(chg = chg * (1 - spline(
+  #   x = c(min(M), max(M)),
+  #   y = c(.001, delta3),
+  #   method = "natural",
+  #   xout = c(0, 6, 12, 18, 24)
+  # )$y * group)) %>%
+  #group_by(id) %>%
+  #mutate(fixef0 = chg + fixef0[1L]) %>%
+  mutate(y = fixef0-spline(x = c(min(M), max(M)), y=c(.001, delta3),
+        method = "natural", xout = c(0, 6, 12, 18, 24))$y*group) %>%
+  #ungroup() %>%
+  mutate(y = y + error) %>%
   mutate(y = plyr::round_any(y, 0.5)) %>%
   group_by(id) %>%
   mutate(chg = y - y[1L]) %>%
   ungroup() %>%
-  mutate(group = as.factor(group), id = as.factor(id))
+  mutate(group = as.factor(group), id = as.factor(id),
+         dgm = "TP",
+         errm = "N",
+         misrate = 0)
 
-# f3 <- ggplot(data = dat3, aes(
-#   x = month,
-#   y = y,
-#   colour = as.factor(group),
-#   group = id
-# )) + geom_line(lwd = .25) +
-#   geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) +
-#   theme(legend.position = "bottom") +
-#   scale_colour_discrete(name = "Group", labels = c("Placebo", "Treatment")) +
-#   xlab("Month") + ylab("FTLD CDR SB score") + ggtitle("30% gradual reduction")
+f3 <- ggplot(data = dat3, aes(
+  x = month,
+  y = y,
+  colour = as.factor(group),
+  group = id
+)) + geom_line(lwd = .25) +
+  geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) +
+  theme(legend.position = "bottom") +
+  scale_colour_discrete(name = "Group", labels = c("Placebo", "Treatment")) +
+  xlab("Month") + ylab("FTLD CDR SB score") + ggtitle("30% gradual reduction")
 return(list(dat0, dat1, dat2, dat3))
 }

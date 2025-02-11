@@ -15,7 +15,7 @@
 #' beta <- c(0.5, 1.2, -0.8)
 #' placeb_model(M, n_pbo = 40, n_act = 80, ncs_df = 2, beta)
 
-placeb_model <- function(M, n_pbo = 40, n_act = 80, ncs_df = 2, beta, jitter_sd = 0.8) {
+placeb_model <- function(M, n_pbo, n_act, ncs_df, beta, jitter_sd) {
   n = n_pbo + n_act
   m = length(M)
   visits <- tibble(visNo = 1:m, M)
