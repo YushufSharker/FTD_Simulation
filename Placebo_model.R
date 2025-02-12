@@ -15,6 +15,25 @@
 #' beta <- c(0.5, 1.2, -0.8)
 #' placeb_model(M, n_pbo = 40, n_act = 80, ncs_df = 2, beta)
 
+# placeb_model <- function(M, n_pbo, n_act, ncs_df, beta, jitter_sd) {
+#   n = n_pbo + n_act
+#   m = length(M)
+#   visits <- tibble(visNo = 1:m, M)
+#   subinfo <- tibble(id = 1:n)
+#   group <- tibble(cbind(id = 1:n, tibble(group = c(rep(0, n_pbo), rep(1, n_act)))))
+#   visinfo <- expand_grid(id = 1:n, visNo = 1:m) %>% group_by(visNo)
+#   d00 <- subinfo %>% left_join(visinfo, by = "id") %>% left_join(visits, by = "visNo") %>%
+#     left_join(group, by = "id")
+#
+#   dd00 <- d00 %>% mutate(Mcat = as.factor(M), month = M + rnorm(m * n, mean = 0, jitter_sd)) %>%
+#     mutate(baseline = ifelse(M > 0, 1, 0))
+#   dd0 <- model.matrix(~ id + visNo + Mcat + ns(dd00$month, 2), dd00) %>% as_tibble() %>% select(-"(Intercept)") %>%
+#     dplyr::rename(ns1 = `ns(dd00$month, 2)1`, ns2 = `ns(dd00$month, 2)2`) %>%
+#     mutate(fixef0 = beta[1] + ns1 * beta[2] + ns2 * beta[3]) %>%
+#     left_join(dd00, by = c('id', 'visNo'))
+#   return(dd0 = dd0)
+# }
+
 placeb_model <- function(M, n_pbo, n_act, ncs_df, beta, jitter_sd) {
   n = n_pbo + n_act
   m = length(M)
@@ -25,10 +44,11 @@ placeb_model <- function(M, n_pbo, n_act, ncs_df, beta, jitter_sd) {
   d00 <- subinfo %>% left_join(visinfo, by = "id") %>% left_join(visits, by = "visNo") %>%
     left_join(group, by = "id")
 
-  dd00 <- d00 %>% mutate(Mcat = as.factor(M), month = M, monthj = M + rnorm(m * n, mean = 0, jitter_sd)) %>%
+  dd00 <- d00 %>% mutate(Mcat = as.factor(M),
+                         month = ifelse(M > 0, M + round(rnorm(m * n, mean = 0, sd = jitter_sd),1), 0)) %>%
     mutate(baseline = ifelse(M > 0, 1, 0))
-  dd0 <- model.matrix(~ id + visNo + Mcat + ns(dd00$month, 2), dd00) %>% as_tibble() %>% select(-"(Intercept)") %>%
-    dplyr::rename(ns1 = `ns(dd00$month, 2)1`, ns2 = `ns(dd00$month, 2)2`) %>%
+  dd0 <- model.matrix(~ id + visNo + Mcat + ns(dd00$M, 2), dd00) %>% as_tibble() %>% select(-"(Intercept)") %>%
+    dplyr::rename(ns1 = `ns(dd00$M, 2)1`, ns2 = `ns(dd00$M, 2)2`) %>%
     mutate(fixef0 = beta[1] + ns1 * beta[2] + ns2 * beta[3]) %>%
     left_join(dd00, by = c('id', 'visNo'))
   return(dd0 = dd0)
