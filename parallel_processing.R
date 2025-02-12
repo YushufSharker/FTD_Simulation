@@ -9,7 +9,7 @@ source("model_fit.R")
 source("warningCapture.R")
 source("dropout_function.R")
 source("cormatsim.R")
-
+source("sim.grid.R")
 
 # simulation function
   sim <- function(delta1 = 0.3,
@@ -49,7 +49,6 @@ source("cormatsim.R")
                   mtP5 = 0.4
                   ) {
   #Data generation
-
   sim_data <- dgm(delta1 = delta1, delta2 = delta2, delta3 = delta3, b0 = b0, b1 = b1, b2 = b2,
       n_pbo = n_pbo, n_act = n_act, sd1 = sd1, sd2 = sd2, sd3 = sd3, sd4 = sd4, sd5 = sd5,
       cor = cor, jitter_sd = jitter_sd, missingPercentage = missingPercentage,
@@ -63,32 +62,10 @@ source("cormatsim.R")
   return(sim_out)
 }
 
-sim.grid <- expand.grid(b0 = c(4),
-                        b1 = seq(7, 25, by = 2), #seq(5, 25, by = 2),
-                        b2 = seq(7, 9, by = 2),# seq(5, 9, by = 2),
-                        delta1 = 0.3,
-                        delta2 = c(0.3, 0.7),
-                        delta3 = c(3, 4), # to expected reduction at the end of the time period
-                        sd1 = 2,
-                        sd2 = 3,
-                        sd3 = 4,
-                        sd4 = 5,
-                        sd5 = 6,
-                        cor = 0.65, #c(0, 0.65),
-                        jitter_sd = .8, #c(0, 0.8),
-                        missingPercentage = .1,
-                        mtP1 = 0.05,
-                        mtP2 = 0.05,
-                        mtP3 = 0.2,
-                        mtP4 = 0.3,
-                        mtP5 = 0.4,
-                        npbo = 40,
-                        nact = 80
-) %>% filter(!(b1 %in% c(17:25) & b2 ==5 )) %>%
-  filter(!(b1 %in% c(19:25) & b2 ==7 )) %>%
-  filter(mtP1 == 0.05, mtP2 == 0.05, mtP3 == 0.2, mtP4 == 0.3, mtP5 == 0.4)
-
-#sim.grid <- sim.grid[c(5, 10,50,60),]
+# taking subset of sim.grid
+sim.grid <-sim.grid_t %>% filter(delta1 ==0.1, delta2 == 0.5, delta3 == 3)
+# sim.grid <-sim.grid_t %>% filter(delta1 ==0.2, delta2 == 0.7, delta3 == 4)
+# sim.grid <-sim.grid_t %>% filter(delta1 ==0.3, delta2 == 0.3, delta3 == 2)
 
 # Parallel processing function
 source("goparallel.R")
