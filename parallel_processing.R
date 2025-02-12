@@ -88,7 +88,7 @@ sim.grid <- expand.grid(b0 = c(4),
   filter(!(b1 %in% c(19:25) & b2 ==7 )) %>%
   filter(mtP1 == 0.05, mtP2 == 0.05, mtP3 == 0.2, mtP4 == 0.3, mtP5 == 0.4)
 
-sim.grid <- sim.grid[c(5, 10,50,60),]
+#sim.grid <- sim.grid[c(5, 10,50,60),]
 
 # Parallel processing function
 source("goparallel.R")
@@ -120,10 +120,10 @@ parallel::clusterEvalQ(cl = cl,
                          require(splines)
                          require(mmrm)
                          require(truncnorm)
-                         require(plyr)
                          require(tmvtnorm)
                          }
   )
+
 
 
 sim_FTD_output<- bind_rows( #future_map_dfr under purrr and furrr lib
@@ -132,7 +132,7 @@ sim_FTD_output<- bind_rows( #future_map_dfr under purrr and furrr lib
   X = matrix(1: nrow(sim.grid)),#10),
   MARGIN = 1,
   FUN = function(x) {
-    lapply(1:100, function(y) {
+    lapply(1:250, function(y) {
       bind_rows(
         c(
         bind_cols(
@@ -158,7 +158,7 @@ sim_FTD_output<- bind_rows( #future_map_dfr under purrr and furrr lib
           mtP5 = sim.grid$mtP5[x],
           n_pbo = sim.grid$npbo[x],
           n_act = sim.grid$nact[x]
-        ), do.call(rbind, (lapply(1:20, function(x) sim.grid[x,])))
+        ), do.call(rbind, (lapply(1:20, function(i) sim.grid[x,])))
         )
       ))
     })

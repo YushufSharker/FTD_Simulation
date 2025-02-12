@@ -125,9 +125,10 @@ error <- as.vector(matrix(t(
   mvtnorm::rmvnorm(n, mean = rep(0, m), sigma = cov, pre0.9_9994 = TRUE)
 )))
 
+
 #Null by NCS
 dat0 <- dat %>% mutate(y = fixef0 + error) %>%
-    mutate(y = plyr::round_any(y, 0.5),
+    mutate(y = round(y/.5)*0.5,
            dgm = "NULL",
            errm = "N",
            misrate = 0)%>%
@@ -148,7 +149,7 @@ dat0N <- dat %>%
   mutate(error = error) %>% group_by(id) %>%
   mutate(y =  Nhmean+error) %>%
   ungroup() %>%
-  mutate(y = plyr::round_any(y, 0.5),
+  mutate(y = round(y/.5)*0.5,
          dgm = "NULL_N",
          errm = "N",
          misrate = 0)%>%
@@ -175,6 +176,7 @@ dat0Nm<- introduce_missing(df = dat0N, outVariable = "chg",
     mutate(y = if_else(row_number() == 1, fixef0[1L], y))%>%
     ungroup()%>%
     mutate(y = y + error)%>%
+    mutate(y = round(y/.5)*0.5) %>%
     group_by(id) %>%
     mutate(chg = y - y[1L]) %>% ungroup() %>%
     mutate(group = as.factor(group), id = as.factor(id))
@@ -202,7 +204,7 @@ dat0Nm<- introduce_missing(df = dat0N, outVariable = "chg",
          dgm = "SP",
          errm = "N",
          misrate = 0) %>%
-  mutate(y = plyr::round_any(y, 0.5))%>%
+  mutate(y = round(y/.5)*0.5)%>%
   group_by(id) %>%
   mutate(chg = y - y[1L]) %>%
   ungroup() %>%
@@ -228,7 +230,7 @@ dat3 <- dat %>%
     xout = c(0, 6, 12, 18, 24)
   )$y * group) %>%
   mutate(y = y + error) %>%
-  mutate(y = plyr::round_any(y, 0.5)) %>%
+  mutate(y = round(y/.5)*0.5) %>%
   group_by(id) %>%
   mutate(chg = y - y[1L]) %>%
   ungroup() %>%
