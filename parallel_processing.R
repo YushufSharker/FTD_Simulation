@@ -102,7 +102,6 @@ parallel::clusterEvalQ(cl = cl,
   )
 
 
-
 sim_FTD_output<- bind_rows( #future_map_dfr under purrr and furrr lib
   parallel::parApply(
   cl = cl,
@@ -145,7 +144,7 @@ sim_FTD_output<- bind_rows( #future_map_dfr under purrr and furrr lib
 parallel::stopCluster(cl)
 end_time <- Sys.time()
 runtime <- (end_time - start_time) # in hours
-save.image("./Outputs/tak594_FTD_SIM_02112025.RData")
+save.image("./Outputs/tak594_FTD_SIM_02132025.RData")
 
 # 5000 replication takes 22.40724 hours to run for 15 setup listed in the sim.grid
 

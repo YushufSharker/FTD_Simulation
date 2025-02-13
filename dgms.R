@@ -7,14 +7,14 @@
 
 # Code lines supporting for testing code
 # Packages
-# library(tidyverse)
-# library(emmeans)
-# library(broom)
-# library(splines)
-# library(mmrm)
-# library(truncnorm)
-# library(tmvtnorm)
-# library(lme4)
+library(tidyverse)
+library(emmeans)
+library(broom)
+library(splines)
+library(mmrm)
+library(truncnorm)
+library(tmvtnorm)
+library(lme4)
 #
 # delta1 = 0.3
 # delta2 = 0.7
@@ -67,10 +67,10 @@ dgm <- function(delta1 = 0.3,
                 n_pbo = 40,
                 n_act = 80,
                 sd1 = 2,
-                sd2 = 3,
-                sd3 = 4,
-                sd4 = 5,
-                sd5 = 6,
+                sd2 = 2,
+                sd3 = 2,
+                sd4 = 2,
+                sd5 = 2,
                 # r12= 0.65,
                 # r13= 0.40,
                 # r14= 0.25,

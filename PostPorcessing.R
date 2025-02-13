@@ -9,17 +9,23 @@ library(mmrm)
 library(truncnorm)
 library(tmvtnorm)
 library(lme4)
-load("./Outputs/tak594_FTD_SIM_01312025.RData")
+load(".")
 
 names(sim_FTD_output)
 
 # power evaluation
-
 sim_FTD_output %>%
   group_by(dgm, model, misrate) %>%
   summarise(
     power = mean(pvalue < 0.05)
   )
+
+# Getting the threshold for p-value to have < 5% under Null
+load("./Outputs/tak594_FTD_SIM_02122025.RData")
+sim_FTD_output %>% filter(misrate ==0, (dgm == "NULL" | dgm == "NULL_N"), model == "ncs-ranslp") %>%
+  summarize(q = quantile(pvalue, 0.05))
+# P-value cutoff should be 0.00446 for natural cubic spline
+
 
 sim_FTD_output %>%
   group_by(b0, b1, b2, delta2, dgm, misrate, model) %>%

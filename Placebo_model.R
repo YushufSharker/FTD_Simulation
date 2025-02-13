@@ -47,8 +47,8 @@ placeb_model <- function(M, n_pbo, n_act, ncs_df, beta, jitter_sd) {
   dd00 <- d00 %>% mutate(Mcat = as.factor(M),
                          month = ifelse(M > 0, M + round(rnorm(m * n, mean = 0, sd = jitter_sd),1), 0)) %>%
     mutate(baseline = ifelse(M > 0, 1, 0))
-  dd0 <- model.matrix(~ id + visNo + Mcat + ns(dd00$M, 2), dd00) %>% as_tibble() %>% select(-"(Intercept)") %>%
-    dplyr::rename(ns1 = `ns(dd00$M, 2)1`, ns2 = `ns(dd00$M, 2)2`) %>%
+  dd0 <- model.matrix(~ id + visNo + Mcat + ns(dd00$month, 2), dd00) %>% as_tibble() %>% select(-"(Intercept)") %>%
+    dplyr::rename(ns1 = `ns(dd00$month, 2)1`, ns2 = `ns(dd00$month, 2)2`) %>%
     mutate(fixef0 = beta[1] + ns1 * beta[2] + ns2 * beta[3]) %>%
     left_join(dd00, by = c('id', 'visNo'))
   return(dd0 = dd0)
