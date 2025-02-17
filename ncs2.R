@@ -15,14 +15,17 @@ Func_ncs_int <- function(data = dat1, last_visit = 24) {
     as.numeric(predict(splines::ns(data[["M"]], df=2), t)[,2])
   }
 
-    fit_ncs_int <- lmer(chg ~
-                        (I(ns21(M)) +
-                         I(ns22(M)))*group +   (1| id),
+    fit_ncs_int <- lmer(y ~
+                          I(ns21(M)) +
+                          I(ns22(M))+(I(ns21(M)) +
+                         I(ns22(M))):group +   (0 + Mcat| id),
                         data = data,
-                        control = lmerControl(check.nobs.vs.nRE = "ignore")
-                        )
+                        control = lmerControl(check.nobs.vs.nRE = "ignore") )
+#0 + Mcat
   sing <- ifelse(isSingular(fit_ncs_int) == TRUE, "Singular", "Non-Singular")
   wtext <- names(warnings())
+  w1 = get_phrase(wtext, "unidentifiable")
+  w2 = get_phrase(wtext, "failed to converge")
         # # Extract the fitted values and residuals
         # dds <- data %>%
         #   mutate(fitted_values = fitted(fit_ncs_int),
@@ -42,8 +45,7 @@ Func_ncs_int <- function(data = dat1, last_visit = 24) {
     fit_ncs_int,
     at = list(M = 24, group = c("0", "1")),
     data = data,
-    mode = "kenward-roger", lmerTest.limit = 15000
-  ) %>%
+    mode = "kenward-roger") %>%
     emmeans(specs = 'group',
             M=24,
             lmerTest.limit = 2000) #%>%

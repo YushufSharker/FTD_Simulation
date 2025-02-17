@@ -15,43 +15,43 @@ library(mmrm)
 library(truncnorm)
 library(tmvtnorm)
 library(lme4)
-#
-# delta1 = 0.3
-# delta2 = 0.7
-# delta3 = 4
-# b0 = 3.4
-# b1 = 11.3
-# b2 = 3.7
-# nhm1 = 3.4
-# nhm2 = 6.5
-# nhm3 = 8.9
-# nhm4 = 9.9
-# nhm5 = 10.1
-# n_pbo = 40
-# n_act = 80
-# sd1 = 2
-# sd2 = 3
-# sd3 = 4
-# sd4 = 5
-# sd5 = 6
-# # r12= 0.65,
-# # r13= 0.40,
-# # r14= 0.25,
-# # r15= 0.15,
-# # r23= 0.65,
-# # r24= 0.40,
-# # r25= 0.25,
-# # r35= 0.65,
-# # r45= 0.65,
-# cor = 0.65
-# jitter_sd = .8
-# missingPercentage = .1
-# mtP1 = 0.05
-# mtP2 = 0.1
-# mtP3 = 0.2
-# mtP4 = 0.3
-# mtP5 = 0.4
-# jitter_sd = 0.8 ### patients visit windows
+
+delta1 = 0.3
+delta2 = 0.7
+delta3 = 4
+b0 = 3.4
+b1 = 11.3
+b2 = 3.7
+nhm1 = 3.4
+nhm2 = 6.5
+nhm3 = 8.9
+nhm4 = 9.9
+nhm5 = 10.1
+n_pbo = 40
+n_act = 80
+sd1 = 2
+sd2 = 3
+sd3 = 4
+sd4 = 5
+sd5 = 6
+# r12= 0.65,
+# r13= 0.40,
+# r14= 0.25,
+# r15= 0.15,
+# r23= 0.65,
+# r24= 0.40,
+# r25= 0.25,
+# r35= 0.65,
+# r45= 0.65,
+cor = 0.65
+jitter_sd = .8
+missingPercentage = .1
+mtP1 = 0.05
+mtP2 = 0.1
+mtP3 = 0.2
+mtP4 = 0.3
+mtP5 = 0.4
+jitter_sd = 0.8 ### patients visit windows
 
 dgm <- function(delta1 = 0.3,
                 delta2 = 0.7,
@@ -123,8 +123,7 @@ dat <- placeb_model(M = M, beta = beta,
   # ungroup()
 set.seed(NULL)
 error <- as.vector(matrix(t(
-  mvtnorm::rmvnorm(n, mean = rep(0, m), sigma = cov, pre0.9_9994 = TRUE)
-)))
+  mvtnorm::rmvnorm(n, mean = rep(0, m), sigma = cov, pre0.9_9994 = TRUE))))
 
 
 #Null by NCS

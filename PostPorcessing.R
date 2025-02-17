@@ -9,36 +9,59 @@ library(mmrm)
 library(truncnorm)
 library(tmvtnorm)
 library(lme4)
-load(".")
 
-names(sim_FTD_output)
-
-# power evaluation
-sim_FTD_output %>%
-  group_by(dgm, model, misrate) %>%
-  summarise(
-    power = mean(pvalue < 0.05)
-  )
 
 # Getting the threshold for p-value to have < 5% under Null
 load("./Outputs/tak594_FTD_SIM_02122025.RData")
 sim_FTD_output %>% filter(misrate ==0, (dgm == "NULL" | dgm == "NULL_N"), model == "ncs-ranslp") %>%
   summarize(q = quantile(pvalue, 0.05))
 # P-value cutoff should be 0.00446 for natural cubic spline
+# datafiles
+# load("./Outputs/tak594_FTD_SIM_02122025.RData")
+#load("./Outputs/tak594_FTD_SIM_02132025.RData")
+# write.csv(
+# sim_FTD_output %>%
+#   group_by(dgm, model, misrate) %>%
+#   summarise(
+#     power = mean(pvalue < 0.05)
+#   ),
+# "general12pvalu153.csv"
+# )
 
-
+# power evaluation
+# for MMRM
+write.csv(
 sim_FTD_output %>%
-  group_by(b0, b1, b2, delta2, dgm, misrate, model) %>%
+  group_by(dgm, model, misrate) %>% filter(model == "MMRM")%>%
   summarise(
-    power = mean(pvalue < 0.05),
-                 estimate = mean(estimate)) %>%
-  filter(dgm == "SP")
+    power = mean(pvalue < 0.05)
+  )
+,"mmrm153.csv"
+)
+
+# for cubic spline
+write.csv(
+  sim_FTD_output %>%
+  group_by(dgm, model, misrate) %>% filter(model == "ncs-ranslp")%>%
+  summarise(
+    power = mean(pvalue < 0.004)
+  )
+,"cs153.csv"
+)
 
 
-sim_FTD_output %>%
-  group_by(b0, b1, b2, delta1 , delta2, delta3, sd1, sd2, sd3, sd4, sd5, cor, jitter_sd, missingPercentage,
-           mtP1, mtP2, mtP3, mtP4, mtP5, dgm, model) %>%
-  summarise(
-    power = mean(pvalue < 0.05),
-    estimate = mean(estimate)) %>% view()
-  filter(dgm != "NULL_N", misrate ==.1)%>%view()
+# getting the estimates or reduction
+write.csv(
+  sim_FTD_output %>%
+    group_by(dgm, model, misrate) %>%
+    summarise(
+      reduction = mean(emmean), absreduction = mean(estimate)
+    )
+  ,"estimates153.csv"
+)
+
+# Comment: make a figure, histogram for the estimates
+
+load("./Outputs/tak594_FTD_SIM_02122025.RData")
+
+

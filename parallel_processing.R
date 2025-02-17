@@ -63,9 +63,9 @@ source("sim.grid.R")
 }
 
 # taking subset of sim.grid
-sim.grid <-sim.grid_t %>% filter(delta1 ==0.1, delta2 == 0.5, delta3 == 3)
-# sim.grid <-sim.grid_t %>% filter(delta1 ==0.2, delta2 == 0.7, delta3 == 4)
-# sim.grid <-sim.grid_t %>% filter(delta1 ==0.3, delta2 == 0.3, delta3 == 2)
+# sim.grid <-sim.grid_t %>% filter(delta1 ==0.1, delta2 == 0.5, delta3 == 3)
+sim.grid <-sim.grid_t %>% filter(delta1 ==0.2, delta2 == 0.3, delta3 == 2)
+# sim.grid <-sim.grid_t %>% filter(delta1 ==0.3, delta2 == 0.7, delta3 == 4)
 
 # Parallel processing function
 source("goparallel.R")
