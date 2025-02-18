@@ -29,6 +29,7 @@ sim_FTD_output %>% filter(misrate ==0, (dgm == "NULL" | dgm == "NULL_N"), model 
 # )
 
 # power evaluation
+load("./Outputs/tak594_FTD_SIM_02132025.RData")
 # for MMRM
 write.csv(
 sim_FTD_output %>%
@@ -61,7 +62,29 @@ write.csv(
 )
 
 # Comment: make a figure, histogram for the estimates
+#load("./Outputs/tak594_FTD_SIM_02122025.RData")
 
-load("./Outputs/tak594_FTD_SIM_02122025.RData")
+# For presentation
+load("./Outputs/tak594_FTD_SIM_02142025.RData") # random intercept + slope for each time point
+sim_FTD_output %>%
+  group_by(dgm, model, misrate) %>%
+  summarise(
+    power = mean(pvalue < 0.05)
+  ) %>% pivot_wider(names_from = dgm, values_from = power) %>% group_by(misrate) %>%
+  gt()
 
+load("./Outputs/tak594_FTD_SIM_02132025.RData") # random intercept only
+sim_FTD_output %>%
+  group_by(dgm, model, misrate) %>%
+  summarise(
+    power = mean(pvalue < 0.05)
+  ) %>% pivot_wider(names_from = dgm, values_from = power) %>% group_by(misrate) %>%
+  gt()
 
+sim_FTD_output %>%
+  group_by(dgm, model, misrate) %>% filter(model == "ncs-ranslp")%>%
+  summarise(
+    power = mean(pvalue < 0.004)
+  )%>% pivot_wider(names_from = dgm, values_from = power)%>%
+  group_by(misrate) %>%
+  gt()

@@ -1,4 +1,5 @@
 # Codes for simulation function run
+rm(list=ls())
 start_time <- Sys.time()
 
 # Conditional power function (Pokok and Mehta modified code for sim)
@@ -108,7 +109,7 @@ sim_FTD_output<- bind_rows( #future_map_dfr under purrr and furrr lib
   X = matrix(1: nrow(sim.grid)),#10),
   MARGIN = 1,
   FUN = function(x) {
-    lapply(1:250, function(y) {
+    lapply(1:200, function(y) {
       bind_rows(
         c(
         bind_cols(
@@ -144,7 +145,7 @@ sim_FTD_output<- bind_rows( #future_map_dfr under purrr and furrr lib
 parallel::stopCluster(cl)
 end_time <- Sys.time()
 runtime <- (end_time - start_time) # in hours
-save.image("./Outputs/tak594_FTD_SIM_02132025.RData")
+save.image("./Outputs/tak594_FTD_SIM_02142025.RData")
 
 # 5000 replication takes 22.40724 hours to run for 15 setup listed in the sim.grid
 

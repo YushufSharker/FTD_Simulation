@@ -40,12 +40,11 @@ sim.grid <- sim.grid %>% filter(!(b1 %in% c(17:25) & b2 ==5 )) %>%
 ggsave("./Outputs/PlaceboModels_test.png", plot = p, width = 5, height = 4, dpi = 300)
 
 figdata <- dgm (delta1 = 0.3, delta2 = 0.3, delta3 = 4, b0 = 4, b1=25, b2 = 9,
-                 n_pbo = 40, n_act=80,
-                 sd1 = 2, sd2 = 3, sd3 = 4, sd4 = 5, sd5 = 6  )
+                 n_pbo = 40, n_act=80, sd1 = 2, sd2 = 3, sd3 = 4, sd4 = 5, sd5 = 6  )
 
 
 # Figure of placebo data origin
-Placebo_model <- placeb_model(M = c(0,6,12,18,24), beta = c (4,25,9))%>%
+Placebo_model <- placeb_model(M = c(0,6,12,18,24), beta = c (4,25,9), n_act = 40, n_pbo = 80, jitter_sd = 0.1)%>%
   group_by(id) %>%
   mutate(chg = fixef0 - fixef0[1L]) %>%
   ungroup()
@@ -60,7 +59,7 @@ spline_interpolation <- function(df) {
     mutate(y= spline(x = x, y = fixef0, method = "natural", xout = M)$y)
   return(df)
 }
-dat2i <- do.call(rbind, lapply(split(Placebo_model, f = dat$id), function(i) spline_interpolation(i)))
+dat2i <- do.call(rbind, lapply(split(Placebo_model, f = Placebo_model$id), function(i) spline_interpolation(i)))
 sp<-dat2i %>% select(-x) %>%
   mutate(y = y + 0,
          dgm = "SP",
@@ -72,7 +71,7 @@ sp<-dat2i %>% select(-x) %>%
   ungroup() %>%
   mutate(group = as.factor(group), id = as.factor(id)) %>%
   ggplot(aes(x = month, y = y, colour = as.factor(group), group = id)) +
-  geom_line(lwd = .25, alpha = .25)+
+  #geom_line(lwd = .25, alpha = .25)+
   geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2)  +
   theme(legend.position = "bottom")+
   scale_colour_discrete(name = "Group", labels = c("Placebo", "Treatment"))+
@@ -96,7 +95,8 @@ tp <- Placebo_model %>%
          dgm = "TP",
          errm = "N",
          misrate = 0) %>%
-  ggplot(aes(x = month, y = y, colour = as.factor(group), group = id)) + geom_line(lwd=.25, alpha = .25)+
+  ggplot(aes(x = month, y = y, colour = as.factor(group), group = id)) +
+  #geom_line(lwd=.25, alpha = .25)+
   geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) +
   theme(legend.position = "bottom")+
   scale_colour_discrete(name = "Group", labels = c("Placebo", "Treatment"))+
@@ -114,10 +114,10 @@ pr <- Placebo_model%>%
   mutate(chg = y - y[1L]) %>% ungroup() %>%
   mutate(group = as.factor(group), id = as.factor(id))%>%
   ggplot(aes(x = month, y = y, colour = as.factor(group), group = id)) +
-  geom_line(lwd = .25, alpha = .25)+
+  #geom_line(lwd = .25, alpha = .25)+
   geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 2) + theme(legend.position = "bottom")+
   scale_colour_discrete(name = "Group", labels = c("Placebo", "Treatment"))+
-  xlab("Month") + ylab("FTLD CDR SB score")+ggtitle("Null Scenario")
+  xlab("Month") + ylab("FTLD CDR SB score")+ggtitle("30% Proportional Reduction")
 
 png("./Outputs/combined_plot2.png", width = 500, height = 500)
 grid.arrange(pb, pr, sp, tp,  ncol = 2)
@@ -125,20 +125,20 @@ dev.off()
 
 
 # Under Null Scenario
-f0<- ggplot(data = figdata[[1]], aes(x = month, y = y, colour = as.factor(group), group = id)) +
+f0<- ggplot(data = figdata[[1]], aes(x = M, y = y, colour = as.factor(group), group = id)) +
   geom_line(lwd = .25, alpha = .15)+
   geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 1, alpha = 1.5) + theme(legend.position = "bottom")+
   scale_colour_discrete(name = "Group", labels = c("Placebo", "Treatment"))+
   xlab("Month") + ylab("FTLD CDR SB score")+ggtitle("Null Scenario")
 
 # Under 30% Proportional reduction
-f1<-ggplot(data = figdata[[5]], aes(x = month, y = y, colour = as.factor(group), group = id)) + geom_line(lwd=.25, alpha = .15)+
+f1<-ggplot(data = figdata[[5]], aes(x = M, y = y, colour = as.factor(group), group = id)) + geom_line(lwd=.25, alpha = .15)+
   geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 1, alpha = 1.5) + theme(legend.position = "bottom")+
   scale_colour_discrete(name = "Group", labels = c("Placebo", "Treatment"))+
-  xlab("Month") + ylab("FTLD CDR SB score")+ggtitle("30% Proportional reduction")
+  xlab("Month") + ylab("FTLD CDR SB score")+ggtitle("30% Proportional Reduction")
 
 # under 30% Slower Progression
-f2<-ggplot(data = figdata[[7]], aes(x = month, y = y, colour = as.factor(group), group = id)) +
+f2<-ggplot(data = figdata[[7]], aes(x = M, y = y, colour = as.factor(group), group = id)) +
   geom_line(lwd = .25, alpha = .15)+
 geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 1, alpha = 1.5)  +
   theme(legend.position = "bottom")+
@@ -147,11 +147,11 @@ geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 1, alpha = 1.5)  +
 
 
 # Linear improvement to 30 over time
-f3<-ggplot(data = figdata[[9]], aes(x = month, y = y, colour = as.factor(group), group = id)) + geom_line(lwd=.25, alpha = .15)+
+f3<-ggplot(data = figdata[[9]], aes(x = M, y = y, colour = as.factor(group), group = id)) + geom_line(lwd=.25, alpha = .15)+
 geom_smooth(aes(group = as.factor(group)), se = FALSE, lwd = 1, alpha = 1.5) +
   theme(legend.position = "bottom")+
   scale_colour_discrete(name = "Group", labels = c("Placebo", "Treatment"))+
-  xlab("Month") + ylab("FTLD CDR SB score")+ggtitle("30% at end")
+  xlab("Month") + ylab("FTLD CDR SB score")+ggtitle("3 unit at 24 Month")
 
 png("./Outputs/combined_dataview.png", width = 500, height = 500)
 grid.arrange(f0, f1, f2, f3,  ncol = 2)
