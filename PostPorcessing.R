@@ -73,6 +73,13 @@ sim_FTD_output %>%
   ) %>% pivot_wider(names_from = dgm, values_from = power) %>% group_by(misrate) %>%
   gt()
 
+sim_FTD_output %>%
+  group_by(dgm, model, misrate) %>%
+  summarise(
+    power = mean(pvalue < 0.05)
+  ) %>% pivot_wider(names_from = dgm, values_from = power) %>% group_by(misrate) %>%
+  gt()
+
 load("./Outputs/tak594_FTD_SIM_02132025.RData") # random intercept only
 sim_FTD_output %>%
   group_by(dgm, model, misrate) %>%
@@ -84,7 +91,27 @@ sim_FTD_output %>%
 sim_FTD_output %>%
   group_by(dgm, model, misrate) %>% filter(model == "ncs-ranslp")%>%
   summarise(
-    power = mean(pvalue < 0.004)
-  )%>% pivot_wider(names_from = dgm, values_from = power)%>%
+    estimates = mean(emmeans, na.rm = TRUE)
+  )%>% pivot_wider(names_from = dgm, values_from = estimates)%>%
   group_by(misrate) %>%
+  gt()
+
+
+load("./Outputs/tak594_FTD_SIM_021182025_.4.55.RData")
+# This is a random selection of placebo models
+sim_FTD_output %>%
+  group_by(dgm, model, misrate) %>%
+  summarise(
+    power = mean(pvalue < 0.05)
+  ) %>% pivot_wider(names_from = dgm, values_from = power) %>% group_by(misrate) %>%
+  gt()
+
+
+load("./Outputs/tak594_FTD_SIM_021192025_.4.54.RData")
+# This is a random selection of placebo models
+sim_FTD_output %>%
+  group_by(dgm, model, misrate) %>%
+  summarise(
+    power = mean(pvalue < 0.05)
+  ) %>% pivot_wider(names_from = dgm, values_from = power) %>% group_by(misrate) %>%
   gt()

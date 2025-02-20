@@ -1,6 +1,6 @@
 # Codes for simulation function run
 rm(list=ls())
-start_time <- Sys.time()
+
 
 # Conditional power function (Pokok and Mehta modified code for sim)
 source("placebo_model.R")
@@ -65,10 +65,12 @@ source("sim.grid.R")
 
 # taking subset of sim.grid
 # sim.grid <-sim.grid_t %>% filter(delta1 ==0.1, delta2 == 0.5, delta3 == 3)
-sim.grid <-sim.grid_t %>% filter(delta1 ==0.2, delta2 == 0.3, delta3 == 2)
+#sim.grid <-sim.grid_t %>% filter(delta1 ==0.2, delta2 == 0.3, delta3 == 2)
 # sim.grid <-sim.grid_t %>% filter(delta1 ==0.3, delta2 == 0.7, delta3 == 4)
-
+  sim.grid <-sim.grid_t %>% filter(delta1 ==0.4, delta2 == 0.5, delta3 == 4)
 # Parallel processing function
+
+start_time <- Sys.time()
 source("goparallel.R")
 goparallel(ncores = 11)
 
@@ -106,7 +108,7 @@ parallel::clusterEvalQ(cl = cl,
 sim_FTD_output<- bind_rows( #future_map_dfr under purrr and furrr lib
   parallel::parApply(
   cl = cl,
-  X = matrix(1: nrow(sim.grid)),#10),
+  X = matrix(select.rows),#10),
   MARGIN = 1,
   FUN = function(x) {
     lapply(1:200, function(y) {
@@ -145,7 +147,7 @@ sim_FTD_output<- bind_rows( #future_map_dfr under purrr and furrr lib
 parallel::stopCluster(cl)
 end_time <- Sys.time()
 runtime <- (end_time - start_time) # in hours
-save.image("./Outputs/tak594_FTD_SIM_02142025.RData")
+save.image("./Outputs/tak594_FTD_SIM_02192025_.4.54.RData")
+# expected duration 12 hours
 
-# 5000 replication takes 22.40724 hours to run for 15 setup listed in the sim.grid
 

@@ -10,25 +10,34 @@ library(truncnorm)
 library(tmvtnorm)
 library(lme4)
 library(gridExtra)
-dat <- placeb_model(M = c(0,6,12,18,24), beta = c (4,7,7))%>%
+
+dat <- placeb_model(M = c(0,6,12,18,24), beta = c (4,7,7), n_act = 40, n_pbo = 80, jitter_sd = .8)%>%
   group_by(id) %>%
   mutate(chg = fixef0 - fixef0[1L]) %>%
   ungroup()
+sim.dfP1 <- expand.grid(b0 = c(4, 5),
+                        b1 = seq(7, 25, by = 2), #seq(5, 25, by = 2),
+                        b2 = seq(7, 9, by = 2))# seq(5, 9, by = 2)
+
 p <-
   ggplot(data = dat, aes(x = month, y = fixef0, group = as.factor(group))) +
   geom_smooth(aes(), se = FALSE, lwd = .5, color = 'black')+theme_bw()+
-  xlab("Month") + ylab("FTLD CDR SB score")
+  xlab("Month") + ylab("FTLD CDR SB score")+ylim(c(2,18))+
+  theme(legend.position = "none")
 
-for (i in 2:nrow(sim.grid_f)){
+for (i in 1:nrow(sim.dfP1)){
+  #readline(prompt = paste("Press [Enter] to execute iteration", i, ": "))
+  #cat("Executing iteration", i, "\n")
   dat2 <- placeb_model(M = c(0,6,12,18,24),
-                       beta = c (sim.grid$b0[i],sim.grid$b1[i],sim.grid$b2[i]))%>%
+                       beta = c (sim.dfP1$b0[i],sim.dfP1$b1[i],sim.dfP1$b2[i]),
+                       n_act = 40, n_pbo = 80, jitter_sd = .8)%>%
     mutate(id = as.factor(i))%>%
     group_by(id) %>%
     mutate(chg = fixef0 - fixef0[1L]) %>%
     ungroup()
-p = p+geom_smooth(aes(color = id), data = dat2, se = FALSE, lwd = .5)
-
+  p = p+geom_smooth(aes(color = id), data = dat2, se = FALSE, lwd = .5)
 }
+
 
 sim.grid_f <- expand.grid(b0 = 4,
                         b1 = seq(7, 25, by = 2),
